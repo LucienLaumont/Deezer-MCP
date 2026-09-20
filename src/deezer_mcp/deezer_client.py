@@ -61,6 +61,22 @@ class DeezerClient:
         payload = await self._get(f"/artist/{artist_id}/top", {"limit": limit})
         return [self._shape_track(item) for item in payload["data"]]
 
+    async def fetch_preview_audio(self, track_id: int) -> bytes:
+        track = await self._get(f"/track/{track_id}")
+        preview_url = track.get("preview")
+        if not preview_url:
+            raise DeezerAPIError(f"Pas de preview disponible pour le titre {track_id}")
+        try:
+            # URL absolue vers un autre hôte (cdnt-preview.dzcdn.net) que la base_url
+            # de ce client (api.deezer.com) — httpx utilise l'URL absolue telle quelle.
+            response = await self._client.get(preview_url)
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise DeezerAPIError(f"Deezer a répondu {exc.response.status_code} pour la preview du titre {track_id}") from exc
+        except httpx.RequestError as exc:
+            raise DeezerAPIError(f"Impossible de télécharger la preview du titre {track_id}: {exc}") from exc
+        return response.content
+
     @staticmethod
     def _shape_track(raw: dict) -> dict:
         artist = raw.get("artist") or {}

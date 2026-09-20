@@ -16,8 +16,15 @@ Testé en conditions réelles avec `search_artists` → `get_artist_top_tracks` 
 | `get_track(track_id)` | Détails d'un titre + preview audio |
 | `get_album(album_id)` | Détails d'un album + tracklist complète (previews incluses) |
 | `get_artist_top_tracks(artist_id, limit=10)` | Titres les plus populaires d'un artiste |
+| `get_track_audio(track_id)` | Télécharge l'extrait MP3 (30s) côté serveur et le renvoie en contenu audio jouable (`AudioContent`), pas juste une URL |
 
 Chaque tool renvoie des champs "propres" (id, title, artist, album, duration, `preview`, link) plutôt que la réponse brute Deezer — la logique de nettoyage vit dans `DeezerClient`.
+
+### Pourquoi `get_track_audio` existe en plus de `preview`
+
+Une URL Deezer brute (`preview`) chargée directement dans un client sandboxé (ex: un Artifact Claude) est bloquée par les vérifications de sécurité réseau du sandbox (`MEDIA_ELEMENT_ERROR: Media load rejected by URL safety check`, vérifié empiriquement). Contourner ça en encodant le MP3 en `data:` URI dans une page HTML fonctionne, mais demande de construire une page à chaque fois.
+
+Le SDK MCP a un type de contenu natif pour ce cas (`AudioContent`, via le helper `Audio` de `mcp.server.mcpserver`) : un tool peut renvoyer de l'audio directement, encodé et typé au niveau du protocole, sans passer par une URL. `get_track_audio` télécharge le MP3 côté serveur et le renvoie ainsi — plus coûteux (~500 Ko par appel) qu'un simple lien, donc un tool séparé plutôt que fusionné avec `get_track`.
 
 ⚠️ Note : `search_albums` ne renvoie pas `release_date` (champ absent de `/search/album`, contrairement à `/album/{id}` utilisé par `get_album`) — vérifié en direct sur l'API, pas un bug.
 
