@@ -8,20 +8,24 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
     async def get_track(track_id: int) -> dict:
         """Récupère les détails d'un titre Deezer à partir de son ID.
 
-        Inclut l'URL `preview` (extrait audio MP3 de 30 secondes) à utiliser pour l'écoute.
+        Inclut le champ `preview`, une URL de référence vers l'extrait audio Deezer (30s).
+        Cette URL n'est PAS jouable directement dans la plupart des clients (bloquée par
+        les vérifications de sécurité réseau des sandboxes) — elle sert seulement de
+        référence/lien à afficher. Si l'utilisateur veut réellement écouter le titre,
+        utiliser `get_track_audio` sur ce même ID, qui renvoie l'audio jouable directement.
         """
         return await client.get_track(track_id)
 
     @mcp.tool()
     async def get_track_audio(track_id: int) -> Audio:
-        """Télécharge l'extrait audio (30 secondes, MP3) d'un titre Deezer et le renvoie
-        directement en tant que contenu audio jouable.
+        """Renvoie l'extrait audio jouable (30 secondes, MP3) d'un titre Deezer.
 
-        Différent de `get_track` : celui-ci ne renvoie qu'une URL (qui peut être bloquée
-        par certains clients pour des raisons de sécurité réseau), alors que `get_track_audio`
-        télécharge les données audio elles-mêmes côté serveur et les renvoie prêtes à jouer.
-        Plus coûteux (téléchargement ~500 Ko) : à utiliser seulement quand l'utilisateur
-        veut vraiment écouter un titre précis, pas pour explorer plusieurs résultats.
+        À utiliser chaque fois que l'utilisateur veut réellement ÉCOUTER un titre précis
+        (pas juste consulter ses infos). Contrairement au champ `preview` renvoyé par
+        `get_track`/`search_tracks`/etc. (une simple URL, non jouable directement dans la
+        plupart des clients), ce tool télécharge les données audio côté serveur et les
+        renvoie prêtes à jouer. Plus coûteux (~500 Ko par appel) : à réserver au titre que
+        l'utilisateur veut vraiment écouter, pas à toute une liste de résultats.
         """
         audio_bytes = await client.fetch_preview_audio(track_id)
         return Audio(data=audio_bytes, format="mpeg")  # -> mime_type "audio/mpeg" (standard, validé)
