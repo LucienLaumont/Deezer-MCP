@@ -8,8 +8,10 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
     async def search_tracks(query: str, limit: int = 10) -> list[dict]:
         """Recherche des titres sur Deezer par texte libre (nom de titre, artiste, album...).
 
-        Renvoie une liste de titres avec leur artiste, leur album, et le champ `preview`
-        (URL vers l'extrait audio, 30 secondes) à présenter à l'utilisateur en lien cliquable.
+        Renvoie une liste de titres avec leur artiste, leur album (`album_id` inclus —
+        utilisable directement avec `get_album_cover`, pas besoin de `search_albums`), et
+        le champ `preview` (URL vers l'extrait audio, 30 secondes) à présenter à
+        l'utilisateur en lien cliquable.
 
         Attention : une recherche par nom d'artiste peut renvoyer des titres où cet
         artiste n'est que featuring (ex: chercher "Daft Punk" peut renvoyer des titres

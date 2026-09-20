@@ -11,7 +11,9 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
         """Récupère les titres les plus populaires d'un artiste Deezer à partir de son ID.
 
         Chaque titre inclut le champ `preview` (URL vers l'extrait audio, 30 secondes) à
-        présenter à l'utilisateur en lien cliquable.
+        présenter à l'utilisateur en lien cliquable, et `album_id` : utiliser directement
+        cet ID avec `get_album_cover` pour la pochette, pas besoin de repasser par
+        `search_albums` pour le retrouver.
         """
         return await client.get_artist_top_tracks(artist_id, limit)
 

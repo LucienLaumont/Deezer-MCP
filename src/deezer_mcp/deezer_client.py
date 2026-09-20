@@ -109,6 +109,7 @@ class DeezerClient:
             "artist": primary_artist,
             "featured_artists": featured_artists,
             "album": album.get("title"),
+            "album_id": album.get("id"),
             "duration": raw.get("duration"),
             "preview": raw.get("preview"),
             "link": raw.get("link"),
