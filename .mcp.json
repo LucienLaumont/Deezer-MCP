@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "deezer": {
+      "type": "stdio",
+      "command": "C:\\Users\\lucie\\Projet\\Deezer-MCP\\.venv\\Scripts\\python.exe",
+      "args": ["-m", "deezer_mcp.server"]
+    }
+  }
+}
