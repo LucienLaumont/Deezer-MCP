@@ -5,7 +5,21 @@ from mcp.server.mcpserver import MCPServer
 from deezer_mcp.deezer_client import DeezerClient
 from deezer_mcp.tools import albums, artists, search, tracks
 
-mcp = MCPServer("deezer-mcp")
+mcp = MCPServer(
+    "deezer-mcp",
+    instructions=(
+        "Les URLs renvoyées par ce serveur (`preview`, `link`) contiennent des paramètres "
+        "techniques longs (jeton d'authentification temporaire pour le streaming). Quand tu "
+        "présentes une de ces URLs à l'utilisateur, formate-la toujours en lien Markdown avec "
+        "un texte descriptif court, jamais l'URL brute — par exemple "
+        "`[🎧 Écouter l'extrait (30s)](url)` ou `[🎵 Écouter en entier sur Deezer](url)`.\n\n"
+        "Les champs `cover` (album) et `picture` (artiste) sont aussi de simples URLs de "
+        "référence, non chargeables directement dans un Artifact (liste blanche du sandbox). "
+        "Pour afficher réellement une pochette ou une photo d'artiste dans une réponse "
+        "visuelle, utiliser `get_album_cover` ou `get_artist_picture` sur l'ID correspondant, "
+        "qui renvoient l'image directement."
+    ),
+)
 _client = DeezerClient()
 
 search.register(mcp, _client)

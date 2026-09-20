@@ -61,20 +61,30 @@ class DeezerClient:
         payload = await self._get(f"/artist/{artist_id}/top", {"limit": limit})
         return [self._shape_track(item) for item in payload["data"]]
 
-    async def fetch_preview_audio(self, track_id: int) -> bytes:
-        track = await self._get(f"/track/{track_id}")
-        preview_url = track.get("preview")
-        if not preview_url:
-            raise DeezerAPIError(f"Pas de preview disponible pour le titre {track_id}")
+    async def fetch_album_cover(self, album_id: int) -> bytes:
+        album = await self._get(f"/album/{album_id}")
+        cover_url = album.get("cover_medium")
+        if not cover_url:
+            raise DeezerAPIError(f"Pas de pochette disponible pour l'album {album_id}")
+        return await self._fetch_binary(cover_url)
+
+    async def fetch_artist_picture(self, artist_id: int) -> bytes:
+        artist = await self._get(f"/artist/{artist_id}")
+        picture_url = artist.get("picture_medium")
+        if not picture_url:
+            raise DeezerAPIError(f"Pas de photo disponible pour l'artiste {artist_id}")
+        return await self._fetch_binary(picture_url)
+
+    async def _fetch_binary(self, url: str) -> bytes:
         try:
-            # URL absolue vers un autre hôte (cdnt-preview.dzcdn.net) que la base_url
+            # URL absolue vers un autre hôte (cdn-images.dzcdn.net) que la base_url
             # de ce client (api.deezer.com) — httpx utilise l'URL absolue telle quelle.
-            response = await self._client.get(preview_url)
+            response = await self._client.get(url)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            raise DeezerAPIError(f"Deezer a répondu {exc.response.status_code} pour la preview du titre {track_id}") from exc
+            raise DeezerAPIError(f"Deezer a répondu {exc.response.status_code} pour {url}") from exc
         except httpx.RequestError as exc:
-            raise DeezerAPIError(f"Impossible de télécharger la preview du titre {track_id}: {exc}") from exc
+            raise DeezerAPIError(f"Impossible de télécharger {url}: {exc}") from exc
         return response.content
 
     @staticmethod

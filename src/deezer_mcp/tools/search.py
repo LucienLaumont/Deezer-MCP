@@ -9,10 +9,7 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
         """Recherche des titres sur Deezer par texte libre (nom de titre, artiste, album...).
 
         Renvoie une liste de titres avec leur artiste, leur album, et le champ `preview`
-        (URL de référence vers l'extrait audio, 30 secondes) — cette URL n'est PAS jouable
-        directement dans la plupart des clients (bloquée par les vérifications de sécurité
-        réseau des sandboxes), elle sert seulement de lien de référence. Si l'utilisateur
-        veut réellement écouter un des titres trouvés, utiliser `get_track_audio` sur son ID.
+        (URL vers l'extrait audio, 30 secondes) à présenter à l'utilisateur en lien cliquable.
 
         Attention : une recherche par nom d'artiste peut renvoyer des titres où cet
         artiste n'est que featuring (ex: chercher "Daft Punk" peut renvoyer des titres
@@ -25,7 +22,11 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
 
     @mcp.tool()
     async def search_albums(query: str, limit: int = 10) -> list[dict]:
-        """Recherche des albums sur Deezer par texte libre (titre d'album ou nom d'artiste)."""
+        """Recherche des albums sur Deezer par texte libre (titre d'album ou nom d'artiste).
+
+        Le champ `cover` est une URL de référence, PAS chargeable directement dans un
+        Artifact. Pour afficher réellement la pochette, utiliser `get_album_cover` sur l'ID.
+        """
         return await client.search_albums(query, limit)
 
     @mcp.tool()
@@ -36,5 +37,8 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
         de distinguer un artiste populaire d'un simple homonyme peu connu — utile
         quand la requête contient une faute d'orthographe (le matching Deezer est flou
         et pondéré par popularité, mais pas garanti de renvoyer le bon artiste en premier).
+
+        Le champ `picture` est une URL de référence, PAS chargeable directement dans un
+        Artifact. Pour afficher réellement la photo, utiliser `get_artist_picture` sur l'ID.
         """
         return await client.search_artists(query, limit)
