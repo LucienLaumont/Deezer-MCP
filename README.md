@@ -2,7 +2,9 @@
 
 Serveur MCP (Model Context Protocol) exposant le catalogue public Deezer — recherche de titres/albums/artistes et écoute des previews audio 30s — à des clients compatibles MCP comme Claude.
 
-Statut : 6 tools implémentés, transport `stdio` (déploiement `streamable-http` à venir).
+Statut : 6 tools implémentés et testés (Inspector + Claude Code en local), transports `stdio` et `streamable-http` fonctionnels. Déploiement distant (Render) à venir.
+
+Testé en conditions réelles avec `search_artists` → `get_artist_top_tracks` via Claude Code (voir historique du projet) : le modèle choisit correctement le bon tool, désambiguïse les homonymes via `nb_fan`, et récupère des previews jouables.
 
 ## Tools disponibles
 
@@ -38,10 +40,17 @@ python -m venv .venv
 pip install -e .
 ```
 
-## Lancer le serveur (dev, transport `stdio`)
+## Lancer le serveur
 
+Local (dev, transport `stdio`, utilisé par `.mcp.json` / `mcp dev`) :
 ```bash
 python -m deezer_mcp.server
 ```
+
+Distant (transport `streamable-http`, utilisé sur Render) :
+```bash
+MCP_TRANSPORT=streamable-http PORT=8000 python -m deezer_mcp.server
+```
+Écoute sur `0.0.0.0:$PORT`, endpoint MCP exposé sur `/mcp`. `PORT` est fourni automatiquement par Render.
 
 Voir [docs/deezer-api.md](docs/deezer-api.md) pour la référence de l'API Deezer utilisée.
