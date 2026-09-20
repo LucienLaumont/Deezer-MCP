@@ -27,7 +27,18 @@ Le projet n'utilise que des *tools*. Explorer les deux autres primitives du prot
 - [ ] Retirer `uv.lock` du repo (le projet utilise `pip`, pas `uv` — fichier resté par erreur).
 - [ ] Rendre le chemin dans `.mcp.json` portable (actuellement un chemin Windows absolu propre à cette machine).
 
-## 5. Idées à discuter avant de s'engager
+## 5. Retenu : orchestration agentique
 
-- [ ] Un tool plus "agentique" combinant plusieurs endpoints en un seul appel (ex: une fiche complète artiste + top titres + albums en une seule réponse), pour illustrer une orchestration côté serveur plutôt que de laisser le modèle enchaîner les appels.
-- [ ] Résilience face à du contenu non fiable renvoyé par l'API dans le contexte du modèle (les résultats de recherche Deezer sont du texte libre saisi par des tiers — angle "sécurité des AI tools" pertinent pour un portfolio).
+Scope validé — deux nouveaux tools, tous deux basés sur des endpoints Deezer déjà documentés mais jamais wrappés (`docs/deezer-api.md` §3.4, §3.6) :
+
+- [ ] **Fiche artiste enrichie** (tool composite) : enchaîne côté serveur `search_artists` (ou un ID direct) → `get_artist_top_tracks` → `/artist/{id}/related` (artistes similaires), renvoyés en une seule réponse. Illustre une orchestration pensée pour réduire les aller-retours du modèle, pas juste un mapping 1 endpoint = 1 tool.
+- [ ] **Générateur de playlist par ambiance** : à partir d'une description en langage naturel ("musique énergique pour courir"), exposer les bons blocs (`/chart`, `/chart/{genre_id}`, `/genre`) pour que le modèle compose lui-même une sélection cohérente. L'intelligence reste côté modèle ; le tool fournit la matière première pertinente (charts par genre) plutôt que de faire du NLP côté serveur.
+
+Pas retenu pour l'instant (mis en pause, pas abandonné) : profondeur protocole (resources/prompts/elicitation/sampling) et brique ML (recherche par embeddings) — cf. section 2 plus haut, à reprendre après ces deux tools.
+
+## 6. Démo publique (GitHub Pages)
+
+- [ ] Page statique de présentation du projet une fois les deux tools ci-dessus en place.
+- [ ] **Vidéo réelle** capturée d'une session Claude utilisant le MCP (recherche, previews, fiche artiste, playlist par ambiance) — pas de faux live chat, GitHub Pages est statique.
+- [ ] **Effet "transcript animé"** : rejouer en CSS/JS un vrai échange déjà eu (texte réel, pas inventé), avec apparition progressive façon frappe — donne un effet démo vivant sans backend ni clé API exposée.
+- [ ] Explicitement exclu : chat live embarqué dans la page (nécessiterait un backend proxy + gestion de coût/abus — hors scope pour une page de démo statique).
