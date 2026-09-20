@@ -8,8 +8,7 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
     async def search_tracks(query: str, limit: int = 10) -> list[dict]:
         """Recherche des titres sur Deezer par texte libre (nom de titre, artiste, album...).
 
-        Renvoie une liste de titres avec leur artiste, leur album (`album_id` inclus —
-        utilisable directement avec `get_album_cover`, pas besoin de `search_albums`), et
+        Renvoie une liste de titres avec leur artiste, leur album (`album_id` inclus), et
         le champ `preview` (URL vers l'extrait audio, 30 secondes) à présenter à
         l'utilisateur en lien cliquable.
 
@@ -26,8 +25,8 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
     async def search_albums(query: str, limit: int = 10) -> list[dict]:
         """Recherche des albums sur Deezer par texte libre (titre d'album ou nom d'artiste).
 
-        Le champ `cover` est une URL de référence, PAS chargeable directement dans un
-        Artifact. Pour afficher réellement la pochette, utiliser `get_album_cover` sur l'ID.
+        Le champ `cover` est une URL de référence Deezer (à ouvrir dans un navigateur),
+        pas une image directement affichable dans la réponse.
         """
         return await client.search_albums(query, limit)
 
@@ -40,7 +39,7 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
         quand la requête contient une faute d'orthographe (le matching Deezer est flou
         et pondéré par popularité, mais pas garanti de renvoyer le bon artiste en premier).
 
-        Le champ `picture` est une URL de référence, PAS chargeable directement dans un
-        Artifact. Pour afficher réellement la photo, utiliser `get_artist_picture` sur l'ID.
+        Le champ `picture` est une URL de référence Deezer (à ouvrir dans un navigateur),
+        pas une image directement affichable dans la réponse.
         """
         return await client.search_artists(query, limit)

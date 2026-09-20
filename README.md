@@ -2,7 +2,7 @@
 
 Serveur MCP (Model Context Protocol) exposant le catalogue public Deezer — recherche de titres/albums/artistes et écoute des previews audio 30s — à des clients compatibles MCP comme Claude.
 
-Statut : 8 tools implémentés et testés en conditions réelles, déployé sur Render (transport `streamable-http`), testé avec succès dans claude.ai et Claude Code.
+Statut : 6 tools implémentés et testés en conditions réelles, déployé sur Render (transport `streamable-http`), testé avec succès dans claude.ai et Claude Code.
 
 Testé en conditions réelles avec `search_artists` → `get_artist_top_tracks` via Claude Code : le modèle choisit correctement le bon tool, désambiguïse les homonymes via `nb_fan`, et récupère des previews. Testé aussi sur claude.ai : le lien de preview renvoyé s'ouvre et joue correctement dans le navigateur.
 
@@ -16,8 +16,6 @@ Testé en conditions réelles avec `search_artists` → `get_artist_top_tracks` 
 | `get_track(track_id)` | Détails d'un titre + preview audio |
 | `get_album(album_id)` | Détails d'un album + tracklist complète (previews incluses) |
 | `get_artist_top_tracks(artist_id, limit=10)` | Titres les plus populaires d'un artiste |
-| `get_album_cover(album_id)` | Pochette d'un album en image directement affichable (pas juste une URL) |
-| `get_artist_picture(artist_id)` | Photo d'un artiste en image directement affichable (pas juste une URL) |
 
 Chaque tool renvoie des champs "propres" (id, title, artist, album, duration, `preview`, link) plutôt que la réponse brute Deezer — la logique de nettoyage vit dans `DeezerClient`.
 
@@ -27,11 +25,17 @@ Piste explorée puis abandonnée : renvoyer l'audio directement dans la réponse
 
 Solution retenue, plus simple : le champ `preview` reste une URL, et le serveur MCP définit un champ `instructions` (transmis une fois au client à la connexion) qui demande explicitement de présenter les URLs renvoyées en lien Markdown avec texte descriptif plutôt qu'en URL brute (qui contient un jeton d'authentification long et illisible). Voir `server.py`.
 
-### Pochettes et photos d'artiste : pourquoi deux tools séparés, contrairement à l'audio
+### Pochettes et photos d'artiste : tools essayés puis retirés
 
-Même contrainte de sandbox que l'audio (liste blanche restreinte à quelques CDN de librairies JS/CSS/fonts — ni Deezer, ni aucun domaine externe arbitraire, vérifié empiriquement même pour un domaine sans rapport avec Deezer). Contrairement à l'audio où un simple lien cliquable est une alternative pleinement valable (cliquer = écouter), il n'y a pas d'équivalent pour une image : un lien vers une pochette ne l'affiche pas dans la réponse, il faut cliquer et quitter la conversation. D'où le choix, cette fois, de garder `get_album_cover`/`get_artist_picture` comme tools dédiés — l'image est encodée en base64 (`ImageContent`), ce qui contourne le sandbox puisqu'aucune requête réseau n'est faite au moment de l'affichage.
+Piste explorée : deux tools dédiés, `get_album_cover(album_id)` et `get_artist_picture(artist_id)`, renvoyant l'image encodée en base64 (`ImageContent`, contourne le sandbox puisqu'aucune requête réseau n'a lieu au moment de l'affichage) **et** la même image sous forme de chaîne `data:image/jpeg;base64,...` en texte brut (`TextContent`), pour que le modèle appelant puisse la recopier littéralement dans un `<img src="...">` d'un Artifact/widget.
 
-**Piège rencontré en testant sur un vrai client (Claude Desktop)** : recevoir l'image en `ImageContent` permet au modèle de la *percevoir* (la décrire, la voir), mais ne lui donne pas forcément accès au texte brut du base64 pour le réutiliser (ex: le copier dans un `<img src="data:...">` d'un Artifact). Résultat observé : le modèle, n'ayant pas ce texte, retombait sur l'URL Deezer brute dans le widget — bloquée par le même sandbox. Fix : les deux tools renvoient maintenant une **liste de deux éléments** (l'image + une chaîne `data:image/jpeg;base64,...` en texte brut), le SDK MCP convertit chaque élément dans son propre bloc de contenu (`ImageContent` + `TextContent`) dans la même réponse — le modèle a donc les deux : de quoi percevoir l'image, et de quoi la recopier littéralement dans du HTML.
+Ça a d'abord semblé résoudre le problème : un premier test sur Claude Desktop affichait bien une image dans le widget. Mais en vérifiant, deux appels réels au même tool (même artiste) ont donné deux résultats très différents une fois copiés dans un Artifact :
+- Un cas où le texte recopié était **strictement identique** à la référence renvoyée par le serveur (même longueur, même SHA256).
+- Un cas où le texte recopié faisait **1834 caractères de plus**, avec un SHA256 totalement différent — malgré les 40 premiers caractères identiques (preuve que la bonne image avait bien été reçue au départ, mais que la copie a divergé en cours de route, vraisemblablement par duplication accidentelle d'un segment).
+
+Vérifié directement en interrogeant le serveur déployé et en comparant des empreintes SHA256 (longueur + hash), pas par relecture visuelle : le serveur renvoie toujours la bonne donnée. Le problème se situe entièrement une étape plus loin, dans la capacité du modèle appelant à reproduire ~13-15 Ko de texte opaque (non-linguistique, donc sans les régularités qui aident normalement un modèle de langage à rester cohérent sur une longue séquence) sans erreur au moment de générer le HTML de l'Artifact. Rien ne garantit ce résultat : ça peut réussir une fois et échouer la suivante, sans erreur visible côté serveur ni côté client.
+
+Comme il n'y a pas de fix possible côté serveur MCP à ce problème — il vit entièrement dans l'étape de génération du modèle, hors de notre contrôle — les deux tools ont été retirés plutôt que gardés comme fonctionnalité non fiable. Note : la perception native de l'image (le modèle "voit" et décrit la photo sans avoir besoin de la recopier en texte) fonctionnait bien de façon isolée, mais ce n'était pas l'usage recherché ici (affichage visuel dans une réponse riche).
 
 ⚠️ Note : `search_albums` ne renvoie pas `release_date` (champ absent de `/search/album`, contrairement à `/album/{id}` utilisé par `get_album`) — vérifié en direct sur l'API, pas un bug.
 

@@ -14,10 +14,8 @@ mcp = MCPServer(
         "un texte descriptif court, jamais l'URL brute — par exemple "
         "`[🎧 Écouter l'extrait (30s)](url)` ou `[🎵 Écouter en entier sur Deezer](url)`.\n\n"
         "Les champs `cover` (album) et `picture` (artiste) sont aussi de simples URLs de "
-        "référence, non chargeables directement dans un Artifact (liste blanche du sandbox). "
-        "Pour afficher réellement une pochette ou une photo d'artiste dans une réponse "
-        "visuelle, utiliser `get_album_cover` ou `get_artist_picture` sur l'ID correspondant, "
-        "qui renvoient l'image directement."
+        "référence Deezer : à présenter en lien cliquable, elles ne peuvent pas être "
+        "affichées comme une image dans la réponse."
     ),
 )
 _client = DeezerClient()
