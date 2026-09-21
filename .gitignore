@@ -7,3 +7,8 @@ venv/
 dist/
 build/
 .pytest_cache/
+
+# Typographies propriétaires Deezer ("(c) Deezer - All Rights Reserved").
+# Conservées en local uniquement : les publier dans ce dépôt public les
+# redistribuerait. Le site utilise Archivo (SIL Open Font License 1.1).
+assets/fonts/DeezerProduct-*/
