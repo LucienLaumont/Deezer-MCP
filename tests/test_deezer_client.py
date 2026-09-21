@@ -13,7 +13,9 @@ BASE = DEEZER_BASE_URL
 
 
 async def test_search_tracks_shapes_results(client, respx_mock):
-    respx_mock.get(f"{BASE}/search/track").mock(return_value=Response(200, json={"data": [make_track()], "total": 1}))
+    respx_mock.get(f"{BASE}/search/track").mock(
+        return_value=Response(200, json={"data": [make_track()], "total": 1})
+    )
 
     results = await client.search_tracks("daft punk", limit=5)
 
@@ -33,7 +35,9 @@ async def test_search_tracks_shapes_results(client, respx_mock):
 
 
 async def test_search_tracks_passes_query_and_limit(client, respx_mock):
-    route = respx_mock.get(f"{BASE}/search/track").mock(return_value=Response(200, json={"data": [], "total": 0}))
+    route = respx_mock.get(f"{BASE}/search/track").mock(
+        return_value=Response(200, json={"data": [], "total": 0})
+    )
 
     await client.search_tracks("eminem", limit=3)
 
@@ -43,7 +47,9 @@ async def test_search_tracks_passes_query_and_limit(client, respx_mock):
 
 
 async def test_search_albums_shapes_results(client, respx_mock):
-    respx_mock.get(f"{BASE}/search/album").mock(return_value=Response(200, json={"data": [make_album()], "total": 1}))
+    respx_mock.get(f"{BASE}/search/album").mock(
+        return_value=Response(200, json={"data": [make_album()], "total": 1})
+    )
 
     results = await client.search_albums("discovery", limit=5)
 
@@ -61,7 +67,9 @@ async def test_search_albums_shapes_results(client, respx_mock):
 
 
 async def test_search_artists_shapes_results(client, respx_mock):
-    respx_mock.get(f"{BASE}/search/artist").mock(return_value=Response(200, json={"data": [make_artist()], "total": 1}))
+    respx_mock.get(f"{BASE}/search/artist").mock(
+        return_value=Response(200, json={"data": [make_artist()], "total": 1})
+    )
 
     results = await client.search_artists("daft punk", limit=5)
 
@@ -80,8 +88,12 @@ async def test_search_artists_shapes_results(client, respx_mock):
 # --- track / album / featured_artists -----------------------------------------
 
 
-async def test_get_track_computes_featured_artists_from_contributors(client, respx_mock):
-    raw = make_track(contributors=[{"name": "Daft Punk"}, {"name": "Pharrell Williams"}])
+async def test_get_track_computes_featured_artists_from_contributors(
+    client, respx_mock
+):
+    raw = make_track(
+        contributors=[{"name": "Daft Punk"}, {"name": "Pharrell Williams"}]
+    )
     respx_mock.get(f"{BASE}/track/3135556").mock(return_value=Response(200, json=raw))
 
     result = await client.get_track(3135556)
@@ -89,7 +101,9 @@ async def test_get_track_computes_featured_artists_from_contributors(client, res
     assert result["featured_artists"] == ["Pharrell Williams"]
 
 
-async def test_get_track_featured_artists_is_none_when_no_contributors_field(client, respx_mock):
+async def test_get_track_featured_artists_is_none_when_no_contributors_field(
+    client, respx_mock
+):
     # /search/track et la tracklist de /album/{id} n'ont pas de "contributors" :
     # featured_artists doit rester None (info non disponible), pas [] (aucun featuring).
     raw = make_track()
@@ -100,7 +114,9 @@ async def test_get_track_featured_artists_is_none_when_no_contributors_field(cli
     assert result["featured_artists"] is None
 
 
-async def test_get_track_featured_artists_empty_list_when_contributors_is_solo(client, respx_mock):
+async def test_get_track_featured_artists_empty_list_when_contributors_is_solo(
+    client, respx_mock
+):
     raw = make_track(contributors=[{"name": "Daft Punk"}])
     respx_mock.get(f"{BASE}/track/3135556").mock(return_value=Response(200, json=raw))
 
@@ -122,7 +138,9 @@ async def test_get_album_includes_shaped_tracklist(client, respx_mock):
 
 
 async def test_get_artist_top_tracks(client, respx_mock):
-    respx_mock.get(f"{BASE}/artist/27/top").mock(return_value=Response(200, json={"data": [make_track()]}))
+    respx_mock.get(f"{BASE}/artist/27/top").mock(
+        return_value=Response(200, json={"data": [make_track()]})
+    )
 
     results = await client.get_artist_top_tracks(27, limit=1)
 
@@ -134,7 +152,12 @@ async def test_get_artist_top_tracks(client, respx_mock):
 
 async def test_error_payload_raises_deezer_api_error(client, respx_mock):
     respx_mock.get(f"{BASE}/track/999").mock(
-        return_value=Response(200, json={"error": {"type": "DataException", "message": "no data", "code": 800}})
+        return_value=Response(
+            200,
+            json={
+                "error": {"type": "DataException", "message": "no data", "code": 800}
+            },
+        )
     )
 
     with pytest.raises(DeezerAPIError, match="no data"):
@@ -159,7 +182,9 @@ async def test_network_error_raises_deezer_api_error(client, respx_mock):
 
 
 async def test_get_artist(client, respx_mock):
-    respx_mock.get(f"{BASE}/artist/27").mock(return_value=Response(200, json=make_artist()))
+    respx_mock.get(f"{BASE}/artist/27").mock(
+        return_value=Response(200, json=make_artist())
+    )
 
     result = await client.get_artist(27)
 
@@ -175,7 +200,9 @@ async def test_get_artist(client, respx_mock):
 
 async def test_get_related_artists(client, respx_mock):
     respx_mock.get(f"{BASE}/artist/27/related").mock(
-        return_value=Response(200, json={"data": [make_artist(id=6404, name="Justice")]})
+        return_value=Response(
+            200, json={"data": [make_artist(id=6404, name="Justice")]}
+        )
     )
 
     results = await client.get_related_artists(27, limit=5)
@@ -184,10 +211,16 @@ async def test_get_related_artists(client, respx_mock):
 
 
 async def test_get_artist_profile_combines_the_three_calls(client, respx_mock):
-    respx_mock.get(f"{BASE}/artist/27").mock(return_value=Response(200, json=make_artist()))
-    respx_mock.get(f"{BASE}/artist/27/top").mock(return_value=Response(200, json={"data": [make_track()]}))
+    respx_mock.get(f"{BASE}/artist/27").mock(
+        return_value=Response(200, json=make_artist())
+    )
+    respx_mock.get(f"{BASE}/artist/27/top").mock(
+        return_value=Response(200, json={"data": [make_track()]})
+    )
     respx_mock.get(f"{BASE}/artist/27/related").mock(
-        return_value=Response(200, json={"data": [make_artist(id=6404, name="Justice")]})
+        return_value=Response(
+            200, json={"data": [make_artist(id=6404, name="Justice")]}
+        )
     )
 
     profile = await client.get_artist_profile(27, top_tracks_limit=10, related_limit=5)
@@ -202,20 +235,41 @@ async def test_get_artist_profile_combines_the_three_calls(client, respx_mock):
 
 async def test_get_genres(client, respx_mock):
     respx_mock.get(f"{BASE}/genre").mock(
-        return_value=Response(200, json={"data": [make_genre(id=0, name="Tous"), make_genre(id=132, name="Pop")]})
+        return_value=Response(
+            200,
+            json={
+                "data": [make_genre(id=0, name="Tous"), make_genre(id=132, name="Pop")]
+            },
+        )
     )
 
     genres = await client.get_genres()
 
     assert genres == [
-        {"id": 0, "name": "Tous", "picture": "https://cdn-images.dzcdn.net/images/misc/x/250x250.jpg"},
-        {"id": 132, "name": "Pop", "picture": "https://cdn-images.dzcdn.net/images/misc/x/250x250.jpg"},
+        {
+            "id": 0,
+            "name": "Tous",
+            "picture": "https://cdn-images.dzcdn.net/images/misc/x/250x250.jpg",
+        },
+        {
+            "id": 132,
+            "name": "Pop",
+            "picture": "https://cdn-images.dzcdn.net/images/misc/x/250x250.jpg",
+        },
     ]
 
 
 async def test_get_chart_tracks_global_hits_chart_endpoint(client, respx_mock):
     route = respx_mock.get(f"{BASE}/chart").mock(
-        return_value=Response(200, json={"tracks": {"data": [make_track()]}, "albums": {}, "artists": {}, "playlists": {}})
+        return_value=Response(
+            200,
+            json={
+                "tracks": {"data": [make_track()]},
+                "albums": {},
+                "artists": {},
+                "playlists": {},
+            },
+        )
     )
 
     results = await client.get_chart_tracks(limit=10)

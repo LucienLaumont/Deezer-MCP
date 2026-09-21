@@ -1,5 +1,7 @@
 # Deezer MCP
 
+[![CI](https://github.com/LucienLaumont/Deezer-MCP/actions/workflows/ci.yml/badge.svg)](https://github.com/LucienLaumont/Deezer-MCP/actions/workflows/ci.yml)
+
 Serveur MCP (Model Context Protocol) exposant le catalogue public Deezer — recherche de titres/albums/artistes et écoute des previews audio 30s — à des clients compatibles MCP comme Claude.
 
 Statut : 9 tools implémentés et testés en conditions réelles, déployé sur Render (transport `streamable-http`), testé avec succès dans claude.ai et Claude Code.

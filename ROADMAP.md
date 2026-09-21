@@ -6,8 +6,8 @@ Pistes pour renforcer le projet côté portfolio (automatisation, qualité, maî
 
 - [x] Suite de tests `pytest` pour `DeezerClient` (`tests/test_deezer_client.py`, mock `httpx` via `respx`) : `_shape_track`/`_shape_album`/`_shape_artist`/`_shape_genre`, la gestion d'erreur (`DeezerAPIError` sur payload `error`, HTTP error, erreur réseau) et les nouvelles méthodes composites/chart/genre, sans dépendre du vrai réseau.
 - [x] Tests des tools eux-mêmes (`tests/test_tools.py`, via `mcp.call_tool()` en mémoire) : câblage de chaque tool au client, et logique propre aux tools composites (résolution par nom la plus populaire, validation des paramètres de `get_artist_profile`).
-- [ ] Pipeline GitHub Actions (`.github/workflows/ci.yml`) : install, lint (`ruff`?), tests, à chaque push/PR sur `main`.
-- [ ] Badge de statut CI dans le README une fois en place.
+- [x] Pipeline GitHub Actions (`.github/workflows/ci.yml`) : install, `ruff check`, `ruff format --check`, `pytest`, à chaque push/PR sur `main`.
+- [x] Badge de statut CI dans le README.
 
 ## 2. Autres primitives MCP (resources & prompts)
 

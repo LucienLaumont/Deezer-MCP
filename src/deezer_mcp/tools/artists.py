@@ -41,11 +41,15 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
         Deezer, à présenter en lien, pas affichables comme image dans la réponse.
         """
         if (artist_id is None) == (artist_name is None):
-            raise ValueError("Fournir soit artist_id, soit artist_name (un seul des deux).")
+            raise ValueError(
+                "Fournir soit artist_id, soit artist_name (un seul des deux)."
+            )
         if artist_name is not None:
             candidates = await client.search_artists(artist_name, limit=10)
             if not candidates:
                 raise ValueError(f"Aucun artiste Deezer trouvé pour {artist_name!r}.")
             best = max(candidates, key=lambda a: a.get("nb_fan") or 0)
             artist_id = best["id"]
-        return await client.get_artist_profile(artist_id, top_tracks_limit, related_limit)
+        return await client.get_artist_profile(
+            artist_id, top_tracks_limit, related_limit
+        )

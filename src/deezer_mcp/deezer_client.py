@@ -25,9 +25,13 @@ class DeezerClient:
             response = await self._client.get(path, params=params)
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            raise DeezerAPIError(f"Deezer a répondu {exc.response.status_code} pour {path}") from exc
+            raise DeezerAPIError(
+                f"Deezer a répondu {exc.response.status_code} pour {path}"
+            ) from exc
         except httpx.RequestError as exc:
-            raise DeezerAPIError(f"Impossible de contacter l'API Deezer ({path}): {exc}") from exc
+            raise DeezerAPIError(
+                f"Impossible de contacter l'API Deezer ({path}): {exc}"
+            ) from exc
 
         payload = response.json()
         if isinstance(payload, dict) and "error" in payload:
@@ -54,10 +58,15 @@ class DeezerClient:
     async def get_album(self, album_id: int) -> dict:
         payload = await self._get(f"/album/{album_id}")
         album = self._shape_album(payload)
-        album["tracks"] = [self._shape_track(item) for item in payload.get("tracks", {}).get("data", [])]
+        album["tracks"] = [
+            self._shape_track(item)
+            for item in payload.get("tracks", {}).get("data", [])
+        ]
         return album
 
-    async def get_artist_top_tracks(self, artist_id: int, limit: int = 10) -> list[dict]:
+    async def get_artist_top_tracks(
+        self, artist_id: int, limit: int = 10
+    ) -> list[dict]:
         payload = await self._get(f"/artist/{artist_id}/top", {"limit": limit})
         return [self._shape_track(item) for item in payload["data"]]
 
@@ -75,13 +84,19 @@ class DeezerClient:
         artist = await self.get_artist(artist_id)
         top_tracks = await self.get_artist_top_tracks(artist_id, top_tracks_limit)
         related_artists = await self.get_related_artists(artist_id, related_limit)
-        return {"artist": artist, "top_tracks": top_tracks, "related_artists": related_artists}
+        return {
+            "artist": artist,
+            "top_tracks": top_tracks,
+            "related_artists": related_artists,
+        }
 
     async def get_genres(self) -> list[dict]:
         payload = await self._get("/genre")
         return [self._shape_genre(item) for item in payload["data"]]
 
-    async def get_chart_tracks(self, genre_id: int | None = None, limit: int = 10) -> list[dict]:
+    async def get_chart_tracks(
+        self, genre_id: int | None = None, limit: int = 10
+    ) -> list[dict]:
         path = f"/chart/{genre_id}" if genre_id is not None else "/chart"
         payload = await self._get(path, {"limit": limit})
         tracks = payload.get("tracks", {}).get("data", [])

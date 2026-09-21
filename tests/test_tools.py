@@ -65,7 +65,9 @@ async def test_all_tools_registered(mcp):
 
 
 async def test_search_tracks_tool_delegates_to_client(mcp, respx_mock):
-    respx_mock.get(f"{BASE}/search/track").mock(return_value=Response(200, json={"data": [make_track()], "total": 1}))
+    respx_mock.get(f"{BASE}/search/track").mock(
+        return_value=Response(200, json={"data": [make_track()], "total": 1})
+    )
 
     result = await mcp.call_tool("search_tracks", {"query": "daft punk"})
 
@@ -74,7 +76,9 @@ async def test_search_tracks_tool_delegates_to_client(mcp, respx_mock):
 
 
 async def test_search_albums_tool_delegates_to_client(mcp, respx_mock):
-    respx_mock.get(f"{BASE}/search/album").mock(return_value=Response(200, json={"data": [make_album()], "total": 1}))
+    respx_mock.get(f"{BASE}/search/album").mock(
+        return_value=Response(200, json={"data": [make_album()], "total": 1})
+    )
 
     result = await mcp.call_tool("search_albums", {"query": "discovery"})
 
@@ -82,7 +86,9 @@ async def test_search_albums_tool_delegates_to_client(mcp, respx_mock):
 
 
 async def test_search_artists_tool_delegates_to_client(mcp, respx_mock):
-    respx_mock.get(f"{BASE}/search/artist").mock(return_value=Response(200, json={"data": [make_artist()], "total": 1}))
+    respx_mock.get(f"{BASE}/search/artist").mock(
+        return_value=Response(200, json={"data": [make_artist()], "total": 1})
+    )
 
     result = await mcp.call_tool("search_artists", {"query": "daft punk"})
 
@@ -90,7 +96,9 @@ async def test_search_artists_tool_delegates_to_client(mcp, respx_mock):
 
 
 async def test_get_track_tool_delegates_to_client(mcp, respx_mock):
-    respx_mock.get(f"{BASE}/track/3135556").mock(return_value=Response(200, json=make_track()))
+    respx_mock.get(f"{BASE}/track/3135556").mock(
+        return_value=Response(200, json=make_track())
+    )
 
     result = await mcp.call_tool("get_track", {"track_id": 3135556})
 
@@ -108,7 +116,9 @@ async def test_get_album_tool_delegates_to_client(mcp, respx_mock):
 
 
 async def test_get_artist_top_tracks_tool_delegates_to_client(mcp, respx_mock):
-    respx_mock.get(f"{BASE}/artist/27/top").mock(return_value=Response(200, json={"data": [make_track()]}))
+    respx_mock.get(f"{BASE}/artist/27/top").mock(
+        return_value=Response(200, json={"data": [make_track()]})
+    )
 
     result = await mcp.call_tool("get_artist_top_tracks", {"artist_id": 27})
 
@@ -119,10 +129,16 @@ async def test_get_artist_top_tracks_tool_delegates_to_client(mcp, respx_mock):
 
 
 async def test_get_artist_profile_by_id(mcp, respx_mock):
-    respx_mock.get(f"{BASE}/artist/27").mock(return_value=Response(200, json=make_artist()))
-    respx_mock.get(f"{BASE}/artist/27/top").mock(return_value=Response(200, json={"data": [make_track()]}))
+    respx_mock.get(f"{BASE}/artist/27").mock(
+        return_value=Response(200, json=make_artist())
+    )
+    respx_mock.get(f"{BASE}/artist/27/top").mock(
+        return_value=Response(200, json={"data": [make_track()]})
+    )
     respx_mock.get(f"{BASE}/artist/27/related").mock(
-        return_value=Response(200, json={"data": [make_artist(id=6404, name="Justice")]})
+        return_value=Response(
+            200, json={"data": [make_artist(id=6404, name="Justice")]}
+        )
     )
 
     result = await mcp.call_tool("get_artist_profile", {"artist_id": 27})
@@ -133,7 +149,9 @@ async def test_get_artist_profile_by_id(mcp, respx_mock):
     assert body["related_artists"][0]["name"] == "Justice"
 
 
-async def test_get_artist_profile_by_name_resolves_most_popular_candidate(mcp, respx_mock):
+async def test_get_artist_profile_by_name_resolves_most_popular_candidate(
+    mcp, respx_mock
+):
     # Reproduit le cas réel observé sur l'API Deezer : le tri par pertinence de
     # `/search/artist` peut placer un homonyme obscur avant l'artiste populaire
     # recherché (cf. docstring de get_artist_profile). Le tool doit résoudre vers
@@ -150,9 +168,15 @@ async def test_get_artist_profile_by_name_resolves_most_popular_candidate(mcp, r
             },
         )
     )
-    respx_mock.get(f"{BASE}/artist/6404").mock(return_value=Response(200, json=make_artist(id=6404, name="Justice")))
-    respx_mock.get(f"{BASE}/artist/6404/top").mock(return_value=Response(200, json={"data": [make_track()]}))
-    respx_mock.get(f"{BASE}/artist/6404/related").mock(return_value=Response(200, json={"data": []}))
+    respx_mock.get(f"{BASE}/artist/6404").mock(
+        return_value=Response(200, json=make_artist(id=6404, name="Justice"))
+    )
+    respx_mock.get(f"{BASE}/artist/6404/top").mock(
+        return_value=Response(200, json={"data": [make_track()]})
+    )
+    respx_mock.get(f"{BASE}/artist/6404/related").mock(
+        return_value=Response(200, json={"data": []})
+    )
 
     result = await mcp.call_tool("get_artist_profile", {"artist_name": "Justice"})
 
@@ -165,15 +189,21 @@ async def test_get_artist_profile_requires_exactly_one_of_id_or_name(mcp):
     assert isinstance(exc_info.value.__cause__, ValueError)
 
     with pytest.raises(UnexpectedToolError) as exc_info:
-        await mcp.call_tool("get_artist_profile", {"artist_id": 27, "artist_name": "Daft Punk"})
+        await mcp.call_tool(
+            "get_artist_profile", {"artist_id": 27, "artist_name": "Daft Punk"}
+        )
     assert isinstance(exc_info.value.__cause__, ValueError)
 
 
 async def test_get_artist_profile_raises_when_name_not_found(mcp, respx_mock):
-    respx_mock.get(f"{BASE}/search/artist").mock(return_value=Response(200, json={"data": [], "total": 0}))
+    respx_mock.get(f"{BASE}/search/artist").mock(
+        return_value=Response(200, json={"data": [], "total": 0})
+    )
 
     with pytest.raises(UnexpectedToolError) as exc_info:
-        await mcp.call_tool("get_artist_profile", {"artist_name": "Un Artiste Qui N'existe Pas"})
+        await mcp.call_tool(
+            "get_artist_profile", {"artist_name": "Un Artiste Qui N'existe Pas"}
+        )
 
     assert "Aucun artiste" in str(exc_info.value.__cause__)
 
@@ -182,7 +212,9 @@ async def test_get_artist_profile_raises_when_name_not_found(mcp, respx_mock):
 
 
 async def test_list_genres_tool_delegates_to_client(mcp, respx_mock):
-    respx_mock.get(f"{BASE}/genre").mock(return_value=Response(200, json={"data": [make_genre()]}))
+    respx_mock.get(f"{BASE}/genre").mock(
+        return_value=Response(200, json={"data": [make_genre()]})
+    )
 
     result = await mcp.call_tool("list_genres", {})
 
@@ -191,7 +223,15 @@ async def test_list_genres_tool_delegates_to_client(mcp, respx_mock):
 
 async def test_get_chart_tracks_tool_with_genre_id(mcp, respx_mock):
     respx_mock.get(f"{BASE}/chart/132").mock(
-        return_value=Response(200, json={"tracks": {"data": [make_track()]}, "albums": {}, "artists": {}, "playlists": {}})
+        return_value=Response(
+            200,
+            json={
+                "tracks": {"data": [make_track()]},
+                "albums": {},
+                "artists": {},
+                "playlists": {},
+            },
+        )
     )
 
     result = await mcp.call_tool("get_chart_tracks", {"genre_id": 132, "limit": 5})
@@ -199,9 +239,19 @@ async def test_get_chart_tracks_tool_with_genre_id(mcp, respx_mock):
     assert payload(result)[0]["title"] == "Harder, Better, Faster, Stronger"
 
 
-async def test_get_chart_tracks_tool_without_genre_id_hits_global_chart(mcp, respx_mock):
+async def test_get_chart_tracks_tool_without_genre_id_hits_global_chart(
+    mcp, respx_mock
+):
     route = respx_mock.get(f"{BASE}/chart").mock(
-        return_value=Response(200, json={"tracks": {"data": [make_track()]}, "albums": {}, "artists": {}, "playlists": {}})
+        return_value=Response(
+            200,
+            json={
+                "tracks": {"data": [make_track()]},
+                "albums": {},
+                "artists": {},
+                "playlists": {},
+            },
+        )
     )
 
     result = await mcp.call_tool("get_chart_tracks", {})

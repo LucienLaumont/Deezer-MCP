@@ -18,7 +18,9 @@ def register(mcp: MCPServer, client: DeezerClient) -> None:
         return await client.get_genres()
 
     @mcp.tool()
-    async def get_chart_tracks(genre_id: int | None = None, limit: int = 10) -> list[dict]:
+    async def get_chart_tracks(
+        genre_id: int | None = None, limit: int = 10
+    ) -> list[dict]:
         """Titres les plus populaires du moment sur Deezer (chart), globalement ou
         pour un genre précis (`genre_id`, voir `list_genres`).
 
