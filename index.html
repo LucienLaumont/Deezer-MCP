@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Deezer MCP</title>
+<meta name="description" content="Serveur MCP exposant le catalogue public Deezer à des clients comme Claude — recherche, previews audio, fiche artiste composite, playlist par ambiance." />
+<style>
+  :root {
+    --bg: #0b0c10;
+    --bg-elevated: #14161c;
+    --border: #23262f;
+    --text: #e8e9ed;
+    --text-dim: #9498a3;
+    --accent: #ff3fa4;
+    --accent-2: #5b8cff;
+    --code-bg: #1a1c23;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #fafafa;
+      --bg-elevated: #ffffff;
+      --border: #e4e4e8;
+      --text: #16171c;
+      --text-dim: #5b5e68;
+      --accent: #d6008a;
+      --accent-2: #2a5fd6;
+      --code-bg: #f1f1f4;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0b0c10; --bg-elevated: #14161c; --border: #23262f;
+    --text: #e8e9ed; --text-dim: #9498a3; --accent: #ff3fa4; --accent-2: #5b8cff; --code-bg: #1a1c23;
+  }
+  :root[data-theme="light"] {
+    --bg: #fafafa; --bg-elevated: #ffffff; --border: #e4e4e8;
+    --text: #16171c; --text-dim: #5b5e68; --accent: #d6008a; --accent-2: #2a5fd6; --code-bg: #f1f1f4;
+  }
+
+  * { box-sizing: border-box; }
+  html { color-scheme: dark light; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55;
+    overflow-x: hidden;
+  }
+  a { color: var(--accent-2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  header.hero {
+    padding: 72px 0 40px;
+    text-align: center;
+    background:
+      radial-gradient(600px 240px at 20% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent),
+      radial-gradient(600px 240px at 80% -10%, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent);
+  }
+  .eyebrow {
+    display: inline-block;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-size: clamp(2rem, 5vw, 3rem);
+    margin: 0 0 12px;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .tagline {
+    font-size: 1.1rem;
+    color: var(--text-dim);
+    max-width: 620px;
+    margin: 0 auto 28px;
+  }
+  .cta-row {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    font-size: 0.92rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .btn:hover { text-decoration: none; border-color: var(--accent-2); }
+  .btn.primary {
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    border: none;
+    color: #fff;
+  }
+  .ci-badge { margin-top: 14px; opacity: 0.9; }
+  .ci-badge img { display: block; margin: 0 auto; }
+
+  section { padding: 56px 0; border-top: 1px solid var(--border); }
+  section h2 {
+    font-size: 1.5rem;
+    margin: 0 0 6px;
+    letter-spacing: -0.01em;
+  }
+  section .section-sub {
+    color: var(--text-dim);
+    margin: 0 0 32px;
+    max-width: 640px;
+  }
+
+  .video-frame {
+    max-width: 780px;
+    margin: 0 auto;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    box-shadow: 0 20px 60px -30px rgba(0,0,0,0.6);
+  }
+  .video-frame video {
+    display: block;
+    width: 100%;
+    aspect-ratio: 2010 / 1080;
+    background: #000;
+  }
+
+  .tool-groups { display: grid; gap: 28px; }
+  .tool-group {
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 24px;
+  }
+  .tool-group-title {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+  .tool-group-title h3 { margin: 0; font-size: 1.05rem; }
+  .tool-group-title .badge {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 10px;
+    white-space: nowrap;
+  }
+  .tool-group p.desc { margin: 0 0 16px; color: var(--text-dim); font-size: 0.94rem; }
+  .tool-list { display: grid; gap: 10px; }
+  .tool-item {
+    display: grid;
+    grid-template-columns: minmax(180px, auto) 1fr;
+    gap: 4px 16px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--code-bg);
+    font-size: 0.88rem;
+    align-items: baseline;
+  }
+  .tool-item code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    color: var(--accent);
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .tool-item span { color: var(--text-dim); }
+  @media (max-width: 560px) {
+    .tool-item { grid-template-columns: 1fr; }
+  }
+
+  .highlights { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+  .highlight {
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    background: var(--bg-elevated);
+  }
+  .highlight h4 { margin: 0 0 6px; font-size: 0.95rem; }
+  .highlight p { margin: 0; color: var(--text-dim); font-size: 0.88rem; }
+
+  footer {
+    padding: 40px 0 60px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 0.88rem;
+    border-top: 1px solid var(--border);
+  }
+  footer a { color: var(--text-dim); }
+  footer a:hover { color: var(--accent-2); }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="eyebrow">Model Context Protocol · Deezer</span>
+    <h1>Deezer MCP</h1>
+    <p class="tagline">
+      Un serveur MCP qui expose le catalogue public Deezer à des clients comme Claude —
+      recherche, previews audio, fiche artiste composite et génération de playlist par ambiance.
+    </p>
+    <div class="cta-row">
+      <a class="btn primary" href="https://github.com/LucienLaumont/Deezer-MCP">Voir le code sur GitHub</a>
+      <a class="btn" href="https://github.com/LucienLaumont/Deezer-MCP/blob/main/docs/deezer-api.md">Doc API Deezer</a>
+    </div>
+    <div class="ci-badge">
+      <a href="https://github.com/LucienLaumont/Deezer-MCP/actions/workflows/ci.yml">
+        <img src="https://github.com/LucienLaumont/Deezer-MCP/actions/workflows/ci.yml/badge.svg" alt="Statut CI" />
+      </a>
+    </div>
+  </div>
+</header>
+
+<section id="demo">
+  <div class="wrap">
+    <h2>En conditions réelles</h2>
+    <p class="section-sub">
+      Une vraie session Claude, tapée en direct, sans montage scénarisé : recherche, fiche
+      artiste enrichie, puis génération d'une playlist par ambiance à partir d'une simple
+      description en langage naturel.
+    </p>
+    <div class="video-frame">
+      <video controls preload="metadata">
+        <source src="assets/demo/Deezer-MCP-Demo.mp4" type="video/mp4" />
+      </video>
+    </div>
+  </div>
+</section>
+
+<section id="tools">
+  <div class="wrap">
+    <h2>9 tools</h2>
+    <p class="section-sub">
+      Un mapping fin sur l'API Deezer pour les usages simples, et deux tools composites
+      pensés pour réduire les allers-retours du modèle plutôt que du 1-endpoint-1-tool.
+    </p>
+    <div class="tool-groups">
+
+      <div class="tool-group">
+        <div class="tool-group-title">
+          <h3>Recherche &amp; consultation</h3>
+          <span class="badge">wrappers directs</span>
+        </div>
+        <p class="desc">Un wrapper mince par endpoint, avec des champs nettoyés côté serveur plutôt que la réponse brute Deezer.</p>
+        <div class="tool-list">
+          <div class="tool-item"><code>search_tracks(query, limit)</code><span>Recherche de titres par texte libre</span></div>
+          <div class="tool-item"><code>search_albums(query, limit)</code><span>Recherche d'albums par texte libre</span></div>
+          <div class="tool-item"><code>search_artists(query, limit)</code><span>Recherche d'artistes, avec <code>nb_fan</code> pour désambiguïser les homonymes</span></div>
+          <div class="tool-item"><code>get_track(track_id)</code><span>Détails d'un titre + preview audio</span></div>
+          <div class="tool-item"><code>get_album(album_id)</code><span>Détails d'un album + tracklist complète</span></div>
+          <div class="tool-item"><code>get_artist_top_tracks(artist_id, limit)</code><span>Titres les plus populaires d'un artiste</span></div>
+        </div>
+      </div>
+
+      <div class="tool-group">
+        <div class="tool-group-title">
+          <h3>Fiche artiste enrichie</h3>
+          <span class="badge">tool composite</span>
+        </div>
+        <p class="desc">
+          Enchaîne côté serveur trois endpoints Deezer en un seul appel modèle, et résout un
+          nom d'artiste vers le candidat le plus populaire — le tri par pertinence de Deezer
+          n'est pas fiable pour repérer l'artiste le plus connu.
+        </p>
+        <div class="tool-list">
+          <div class="tool-item"><code>get_artist_profile(artist_id | artist_name)</code><span>Infos artiste + top titres + artistes similaires en un appel</span></div>
+        </div>
+      </div>
+
+      <div class="tool-group">
+        <div class="tool-group-title">
+          <h3>Playlist par ambiance</h3>
+          <span class="badge">l'intelligence reste côté modèle</span>
+        </div>
+        <p class="desc">
+          Pas de NLP côté serveur : ces deux tools fournissent juste la matière première
+          (genres, charts) pour que le modèle compose lui-même une sélection cohérente avec
+          une description libre ("ambiance road trip de nuit", "énergique pour courir"...).
+        </p>
+        <div class="tool-list">
+          <div class="tool-item"><code>list_genres()</code><span>Genres Deezer disponibles, pour cibler un chart</span></div>
+          <div class="tool-item"><code>get_chart_tracks(genre_id, limit)</code><span>Titres populaires du moment, globalement ou par genre</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<section id="under-the-hood">
+  <div class="wrap">
+    <h2>Sous le capot</h2>
+    <p class="section-sub">Quelques décisions qui ne se voient pas dans une démo mais qui tiennent le serveur debout.</p>
+    <div class="highlights">
+      <div class="highlight">
+        <h4>Erreurs toujours en HTTP 200</h4>
+        <p>Deezer répond 200 même en cas d'erreur logique — chaque requête vérifie systématiquement la clé <code>error</code> du payload plutôt que de se fier au status code.</p>
+      </div>
+      <div class="highlight">
+        <h4>Résolution par popularité, pas par pertinence</h4>
+        <p>Chercher "Justice" par nom peut renvoyer un homonyme à 1 000 fans avant le vrai groupe à 800 000 — la résolution retient le candidat avec le plus de <code>nb_fan</code>, pas le premier résultat.</p>
+      </div>
+      <div class="highlight">
+        <h4>32 tests, zéro réseau réel</h4>
+        <p>Suite <code>pytest</code> avec <code>respx</code> au niveau du transport <code>httpx</code> — shaping des données, gestion d'erreur, et logique des tools composites couverts sans dépendance au vrai réseau.</p>
+      </div>
+      <div class="highlight">
+        <h4>CI sur chaque push</h4>
+        <p>GitHub Actions : <code>ruff check</code>, <code>ruff format --check</code>, puis <code>pytest</code> — à chaque push et pull request sur <code>main</code>.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p><a href="https://github.com/LucienLaumont/Deezer-MCP">github.com/LucienLaumont/Deezer-MCP</a></p>
+  </div>
+</footer>
+
+</body>
+</html>
