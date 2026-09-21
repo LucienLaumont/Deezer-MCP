@@ -4,224 +4,316 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Deezer MCP</title>
-<meta name="description" content="Serveur MCP exposant le catalogue public Deezer à des clients comme Claude — recherche, previews audio, fiche artiste composite, playlist par ambiance." />
+<meta name="description" content="Serveur MCP exposant le catalogue public Deezer à des clients comme Claude — recherche, previews audio, fiche artiste composite et génération de playlist par ambiance." />
+<link rel="preload" href="assets/fonts/space-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin />
 <style>
+  /* Space Grotesk (SIL Open Font License 1.1), auto-hébergé : pas de requête
+     vers un tiers au chargement de la page. Fichiers variables 300–700. */
+  @font-face {
+    font-family: "Space Grotesk";
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url("assets/fonts/space-grotesk-latin-ext.woff2") format("woff2");
+    unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+                   U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+                   U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+  }
+  @font-face {
+    font-family: "Space Grotesk";
+    font-style: normal;
+    font-weight: 300 700;
+    font-display: swap;
+    src: url("assets/fonts/space-grotesk-latin.woff2") format("woff2");
+    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+                   U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+                   U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+  }
+
   :root {
-    --bg: #0b0c10;
-    --bg-elevated: #14161c;
-    --border: #23262f;
-    --text: #e8e9ed;
-    --text-dim: #9498a3;
-    --accent: #ff3fa4;
-    --accent-2: #5b8cff;
-    --code-bg: #1a1c23;
-  }
-  @media (prefers-color-scheme: light) {
-    :root {
-      --bg: #fafafa;
-      --bg-elevated: #ffffff;
-      --border: #e4e4e8;
-      --text: #16171c;
-      --text-dim: #5b5e68;
-      --accent: #d6008a;
-      --accent-2: #2a5fd6;
-      --code-bg: #f1f1f4;
-    }
-  }
-  :root[data-theme="dark"] {
-    --bg: #0b0c10; --bg-elevated: #14161c; --border: #23262f;
-    --text: #e8e9ed; --text-dim: #9498a3; --accent: #ff3fa4; --accent-2: #5b8cff; --code-bg: #1a1c23;
-  }
-  :root[data-theme="light"] {
-    --bg: #fafafa; --bg-elevated: #ffffff; --border: #e4e4e8;
-    --text: #16171c; --text-dim: #5b5e68; --accent: #d6008a; --accent-2: #2a5fd6; --code-bg: #f1f1f4;
+    /* Palette relevée sur le CSS live de deezer.com (rebrand 2023, Koto) */
+    --bg:          #14041e;
+    --bg-deep:     #0d0214;
+    --surface:     #1d0a2a;
+    --surface-2:   #260f35;
+    --border:      #35164a;
+    --purple:      #a238ff;
+    --purple-soft: #d9b3ff;
+    --pink:        #f673ff;
+    --cyan:        #79ddec;
+    --text:        #fffff3;
+    --text-dim:    #a2a2ad;
+
+    --font: "Space Grotesk", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   }
 
   * { box-sizing: border-box; }
-  html { color-scheme: dark light; }
+  html { color-scheme: dark; scroll-behavior: smooth; }
   body {
     margin: 0;
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-family: var(--font);
     line-height: 1.55;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
   }
-  a { color: var(--accent-2); text-decoration: none; }
+  a { color: var(--purple-soft); text-decoration: none; }
   a:hover { text-decoration: underline; }
+  :focus-visible { outline: 2px solid var(--purple); outline-offset: 3px; border-radius: 4px; }
 
-  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+  .wrap { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
 
-  header.hero {
-    padding: 72px 0 40px;
+  /* ---------- Hero ---------- */
+  .hero {
+    position: relative;
+    padding: 64px 0 56px;
     text-align: center;
+    overflow: hidden;
     background:
-      radial-gradient(600px 240px at 20% -10%, color-mix(in srgb, var(--accent) 18%, transparent), transparent),
-      radial-gradient(600px 240px at 80% -10%, color-mix(in srgb, var(--accent-2) 16%, transparent), transparent);
+      radial-gradient(760px 380px at 50% -30%, color-mix(in srgb, var(--purple) 42%, transparent), transparent 70%),
+      linear-gradient(180deg, var(--bg-deep), var(--bg));
   }
-  .eyebrow {
-    display: inline-block;
-    font-size: 0.75rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--text-dim);
-    border: 1px solid var(--border);
-    border-radius: 999px;
-    padding: 4px 12px;
-    margin-bottom: 20px;
+  .hero::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--purple), var(--pink), transparent);
+    opacity: 0.6;
   }
+
+  /* Motif "beat" — clin d'œil au langage visuel Deezer (égaliseur pulsé) */
+  .beat {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 5px;
+    height: 46px;
+    margin-bottom: 26px;
+  }
+  .beat i {
+    display: block;
+    width: 7px;
+    border-radius: 4px;
+    background: var(--purple);
+    animation: pulse 1.25s ease-in-out infinite;
+  }
+  .beat i:nth-child(1) { height: 30%; animation-delay: -.9s;  background: var(--purple); }
+  .beat i:nth-child(2) { height: 62%; animation-delay: -.45s; background: var(--pink); }
+  .beat i:nth-child(3) { height: 100%; animation-delay: -.15s; background: var(--purple); }
+  .beat i:nth-child(4) { height: 70%; animation-delay: -.7s;  background: var(--cyan); }
+  .beat i:nth-child(5) { height: 40%; animation-delay: -.3s;  background: var(--purple); }
+  @keyframes pulse {
+    0%, 100% { transform: scaleY(.45); }
+    50%      { transform: scaleY(1); }
+  }
+  .beat i { transform-origin: bottom; }
+  @media (prefers-reduced-motion: reduce) {
+    .beat i { animation: none; }
+  }
+
   h1 {
-    font-size: clamp(2rem, 5vw, 3rem);
-    margin: 0 0 12px;
+    font-size: clamp(2.4rem, 7vw, 4rem);
+    line-height: 1.02;
+    margin: 0 0 16px;
+    letter-spacing: -0.035em;
+    font-weight: 700;
     color: var(--text);
-    letter-spacing: -0.02em;
+  }
+  h1 .accent {
+    background: linear-gradient(95deg, var(--purple), var(--pink));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
   .tagline {
-    font-size: 1.1rem;
+    font-size: 1.08rem;
     color: var(--text-dim);
-    max-width: 620px;
-    margin: 0 auto 28px;
+    max-width: 600px;
+    margin: 0 auto 30px;
   }
-  .cta-row {
-    display: flex;
-    gap: 12px;
-    justify-content: center;
-    flex-wrap: wrap;
-    margin-bottom: 8px;
-  }
+  .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
   .btn {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    border-radius: 10px;
+    padding: 12px 24px;
+    border-radius: 999px;
     border: 1px solid var(--border);
-    font-size: 0.92rem;
+    font-size: 0.94rem;
     font-weight: 600;
     color: var(--text);
+    transition: transform .15s ease, border-color .15s ease;
   }
-  .btn:hover { text-decoration: none; border-color: var(--accent-2); }
+  .btn:hover { text-decoration: none; transform: translateY(-2px); border-color: var(--purple); }
   .btn.primary {
-    background: linear-gradient(90deg, var(--accent), var(--accent-2));
-    border: none;
-    color: #fff;
+    background: linear-gradient(95deg, var(--purple), var(--pink));
+    border-color: transparent;
+    color: #14041e;
   }
-  .ci-badge { margin-top: 14px; opacity: 0.9; }
+  .ci-badge { margin-top: 20px; }
   .ci-badge img { display: block; margin: 0 auto; }
 
-  section { padding: 56px 0; border-top: 1px solid var(--border); }
-  section h2 {
-    font-size: 1.5rem;
-    margin: 0 0 6px;
-    letter-spacing: -0.01em;
+  /* ---------- Sections ---------- */
+  section { padding: 72px 0; }
+  section + section { border-top: 1px solid var(--border); }
+  .sec-head { margin-bottom: 36px; }
+  .kicker {
+    display: inline-block;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--purple-soft);
+    margin-bottom: 10px;
   }
-  section .section-sub {
-    color: var(--text-dim);
-    margin: 0 0 32px;
-    max-width: 640px;
-  }
+  h2 { font-size: clamp(1.5rem, 3.4vw, 2.1rem); margin: 0 0 10px; letter-spacing: -0.025em; }
+  .sec-sub { color: var(--text-dim); margin: 0; max-width: 620px; }
 
+  /* ---------- Vidéo ---------- */
   .video-frame {
-    max-width: 780px;
-    margin: 0 auto;
-    border-radius: 14px;
+    border-radius: 18px;
     overflow: hidden;
     border: 1px solid var(--border);
-    background: var(--bg-elevated);
-    box-shadow: 0 20px 60px -30px rgba(0,0,0,0.6);
-  }
-  .video-frame video {
-    display: block;
-    width: 100%;
-    aspect-ratio: 2010 / 1080;
     background: #000;
+    box-shadow: 0 30px 80px -40px var(--purple);
+  }
+  .video-frame video { display: block; width: 100%; aspect-ratio: 2010 / 1080; }
+
+  /* ---------- Tools ---------- */
+  .groups { display: grid; gap: 20px; }
+  .group {
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 26px;
+    overflow: hidden;
+  }
+  .group::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--tint);
+  }
+  .group[data-tint="purple"] { --tint: var(--purple); }
+  .group[data-tint="pink"]   { --tint: var(--pink); }
+  .group[data-tint="cyan"]   { --tint: var(--cyan); }
+
+  .group-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .group-head h3 { margin: 0; font-size: 1.12rem; letter-spacing: -0.015em; }
+  .tag {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--tint);
+    border: 1px solid color-mix(in srgb, var(--tint) 45%, transparent);
+    background: color-mix(in srgb, var(--tint) 12%, transparent);
+    border-radius: 999px;
+    padding: 4px 12px;
+    white-space: nowrap;
+  }
+  .group > p.desc { margin: 0 0 20px; color: var(--text-dim); font-size: 0.95rem; max-width: 70ch; }
+
+  .tool {
+    display: grid;
+    grid-template-columns: minmax(0, auto) 1fr;
+    gap: 6px 18px;
+    align-items: baseline;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--surface-2);
+    font-size: 0.89rem;
+  }
+  .tool + .tool { margin-top: 8px; }
+  .tool code {
+    font-family: var(--mono);
+    font-size: 0.83rem;
+    color: var(--purple-soft);
+    white-space: nowrap;
+  }
+  .tool span { color: var(--text-dim); }
+  .tool span code { white-space: normal; font-size: 0.8rem; }
+  @media (max-width: 620px) {
+    .tool { grid-template-columns: 1fr; }
+    .tool code { white-space: normal; }
   }
 
-  .tool-groups { display: grid; gap: 28px; }
-  .tool-group {
-    background: var(--bg-elevated);
+  /* ---------- Sous le capot ---------- */
+  .cards { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); }
+  .card {
     border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 24px;
+    border-radius: 16px;
+    padding: 22px;
+    background: var(--surface);
   }
-  .tool-group-title {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 14px;
-    flex-wrap: wrap;
+  .card h4 { margin: 0 0 8px; font-size: 0.98rem; letter-spacing: -0.01em; }
+  .card p { margin: 0; color: var(--text-dim); font-size: 0.88rem; }
+  .card code { font-family: var(--mono); font-size: 0.82rem; color: var(--purple-soft); }
+
+  /* ---------- Footer ---------- */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 44px 0 56px;
+    text-align: center;
+    background: linear-gradient(180deg, var(--bg), var(--bg-deep));
   }
-  .tool-group-title h3 { margin: 0; font-size: 1.05rem; }
-  .tool-group-title .badge {
-    font-size: 0.72rem;
+  .attribution {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
     color: var(--text-dim);
     border: 1px solid var(--border);
     border-radius: 999px;
-    padding: 2px 10px;
-    white-space: nowrap;
+    padding: 9px 20px;
+    margin-bottom: 18px;
   }
-  .tool-group p.desc { margin: 0 0 16px; color: var(--text-dim); font-size: 0.94rem; }
-  .tool-list { display: grid; gap: 10px; }
-  .tool-item {
-    display: grid;
-    grid-template-columns: minmax(180px, auto) 1fr;
-    gap: 4px 16px;
-    padding: 10px 12px;
-    border-radius: 8px;
-    background: var(--code-bg);
-    font-size: 0.88rem;
-    align-items: baseline;
+  .attribution .dot {
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--purple);
+    flex: none;
   }
-  .tool-item code {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    color: var(--accent);
-    font-size: 0.85rem;
-    white-space: nowrap;
-  }
-  .tool-item span { color: var(--text-dim); }
-  @media (max-width: 560px) {
-    .tool-item { grid-template-columns: 1fr; }
-  }
-
-  .highlights { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-  .highlight {
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 18px;
-    background: var(--bg-elevated);
-  }
-  .highlight h4 { margin: 0 0 6px; font-size: 0.95rem; }
-  .highlight p { margin: 0; color: var(--text-dim); font-size: 0.88rem; }
-
-  footer {
-    padding: 40px 0 60px;
-    text-align: center;
+  .attribution strong { color: var(--text); font-weight: 600; }
+  .disclaimer {
+    margin: 0 auto 16px;
+    max-width: 540px;
+    font-size: 0.78rem;
+    line-height: 1.5;
     color: var(--text-dim);
-    font-size: 0.88rem;
-    border-top: 1px solid var(--border);
+    opacity: .75;
   }
-  footer a { color: var(--text-dim); }
-  footer a:hover { color: var(--accent-2); }
+  .footer-link { font-size: 0.88rem; color: var(--text-dim); }
 </style>
 </head>
 <body>
 
 <header class="hero">
   <div class="wrap">
-    <span class="eyebrow">Model Context Protocol · Deezer</span>
-    <h1>Deezer MCP</h1>
+    <div class="beat" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <h1>Deezer <span class="accent">MCP</span></h1>
     <p class="tagline">
-      Un serveur MCP qui expose le catalogue public Deezer à des clients comme Claude —
-      recherche, previews audio, fiche artiste composite et génération de playlist par ambiance.
+      Un serveur <strong>Model Context Protocol</strong> qui ouvre le catalogue Deezer
+      aux assistants comme Claude — recherche, previews audio, fiche artiste composite
+      et playlists générées par ambiance.
     </p>
     <div class="cta-row">
-      <a class="btn primary" href="https://github.com/LucienLaumont/Deezer-MCP">Voir le code sur GitHub</a>
+      <a class="btn primary" href="https://github.com/LucienLaumont/Deezer-MCP">Voir le code</a>
       <a class="btn" href="https://github.com/LucienLaumont/Deezer-MCP/blob/main/docs/deezer-api.md">Doc API Deezer</a>
     </div>
     <div class="ci-badge">
       <a href="https://github.com/LucienLaumont/Deezer-MCP/actions/workflows/ci.yml">
-        <img src="https://github.com/LucienLaumont/Deezer-MCP/actions/workflows/ci.yml/badge.svg" alt="Statut CI" />
+        <img src="https://github.com/LucienLaumont/Deezer-MCP/actions/workflows/ci.yml/badge.svg" alt="Statut de l'intégration continue" />
       </a>
     </div>
   </div>
@@ -229,12 +321,14 @@
 
 <section id="demo">
   <div class="wrap">
-    <h2>En conditions réelles</h2>
-    <p class="section-sub">
-      Une vraie session Claude, tapée en direct, sans montage scénarisé : recherche, fiche
-      artiste enrichie, puis génération d'une playlist par ambiance à partir d'une simple
-      description en langage naturel.
-    </p>
+    <div class="sec-head">
+      <span class="kicker">Démo</span>
+      <h2>En conditions réelles</h2>
+      <p class="sec-sub">
+        Une vraie session Claude, tapée en direct et sans scénario : une découverte
+        d'artiste, puis une sélection construite à partir d'artistes similaires.
+      </p>
+    </div>
     <div class="video-frame">
       <video controls preload="metadata">
         <source src="assets/demo/Deezer-MCP-Demo.mp4" type="video/mp4" />
@@ -245,84 +339,87 @@
 
 <section id="tools">
   <div class="wrap">
-    <h2>9 tools</h2>
-    <p class="section-sub">
-      Un mapping fin sur l'API Deezer pour les usages simples, et deux tools composites
-      pensés pour réduire les allers-retours du modèle plutôt que du 1-endpoint-1-tool.
-    </p>
-    <div class="tool-groups">
+    <div class="sec-head">
+      <span class="kicker">Capacités</span>
+      <h2>9 tools</h2>
+      <p class="sec-sub">
+        Des wrappers fins pour les usages directs, et deux briques composites pensées
+        pour réduire les allers-retours du modèle plutôt que de mapper bêtement
+        un endpoint sur un tool.
+      </p>
+    </div>
 
-      <div class="tool-group">
-        <div class="tool-group-title">
+    <div class="groups">
+
+      <article class="group" data-tint="purple">
+        <div class="group-head">
           <h3>Recherche &amp; consultation</h3>
-          <span class="badge">wrappers directs</span>
+          <span class="tag">wrappers directs</span>
         </div>
-        <p class="desc">Un wrapper mince par endpoint, avec des champs nettoyés côté serveur plutôt que la réponse brute Deezer.</p>
-        <div class="tool-list">
-          <div class="tool-item"><code>search_tracks(query, limit)</code><span>Recherche de titres par texte libre</span></div>
-          <div class="tool-item"><code>search_albums(query, limit)</code><span>Recherche d'albums par texte libre</span></div>
-          <div class="tool-item"><code>search_artists(query, limit)</code><span>Recherche d'artistes, avec <code>nb_fan</code> pour désambiguïser les homonymes</span></div>
-          <div class="tool-item"><code>get_track(track_id)</code><span>Détails d'un titre + preview audio</span></div>
-          <div class="tool-item"><code>get_album(album_id)</code><span>Détails d'un album + tracklist complète</span></div>
-          <div class="tool-item"><code>get_artist_top_tracks(artist_id, limit)</code><span>Titres les plus populaires d'un artiste</span></div>
-        </div>
-      </div>
+        <p class="desc">Un wrapper mince par endpoint, avec des champs nettoyés côté serveur plutôt que la réponse brute de l'API.</p>
+        <div class="tool"><code>search_tracks(query, limit)</code><span>Recherche de titres par texte libre</span></div>
+        <div class="tool"><code>search_albums(query, limit)</code><span>Recherche d'albums par texte libre</span></div>
+        <div class="tool"><code>search_artists(query, limit)</code><span>Recherche d'artistes, avec <code>nb_fan</code> pour départager les homonymes</span></div>
+        <div class="tool"><code>get_track(track_id)</code><span>Détails d'un titre et son extrait audio</span></div>
+        <div class="tool"><code>get_album(album_id)</code><span>Détails d'un album et sa tracklist complète</span></div>
+        <div class="tool"><code>get_artist_top_tracks(artist_id, limit)</code><span>Titres les plus populaires d'un artiste</span></div>
+      </article>
 
-      <div class="tool-group">
-        <div class="tool-group-title">
+      <article class="group" data-tint="pink">
+        <div class="group-head">
           <h3>Fiche artiste enrichie</h3>
-          <span class="badge">tool composite</span>
+          <span class="tag">tool composite</span>
         </div>
         <p class="desc">
-          Enchaîne côté serveur trois endpoints Deezer en un seul appel modèle, et résout un
-          nom d'artiste vers le candidat le plus populaire — le tri par pertinence de Deezer
-          n'est pas fiable pour repérer l'artiste le plus connu.
+          Enchaîne trois endpoints côté serveur pour n'exposer qu'un seul appel au modèle,
+          et résout un nom d'artiste vers le candidat le plus populaire — le classement par
+          pertinence de l'API ne suffit pas à retrouver l'artiste réellement recherché.
         </p>
-        <div class="tool-list">
-          <div class="tool-item"><code>get_artist_profile(artist_id | artist_name)</code><span>Infos artiste + top titres + artistes similaires en un appel</span></div>
-        </div>
-      </div>
+        <div class="tool"><code>get_artist_profile(artist_id | artist_name)</code><span>Infos artiste, top titres et artistes similaires en un appel</span></div>
+      </article>
 
-      <div class="tool-group">
-        <div class="tool-group-title">
+      <article class="group" data-tint="cyan">
+        <div class="group-head">
           <h3>Playlist par ambiance</h3>
-          <span class="badge">l'intelligence reste côté modèle</span>
+          <span class="tag">l'intelligence reste côté modèle</span>
         </div>
         <p class="desc">
-          Pas de NLP côté serveur : ces deux tools fournissent juste la matière première
-          (genres, charts) pour que le modèle compose lui-même une sélection cohérente avec
-          une description libre ("ambiance road trip de nuit", "énergique pour courir"...).
+          Aucune analyse de langage côté serveur : ces deux tools fournissent la matière
+          première (genres, charts) pour que le modèle compose lui-même une sélection
+          cohérente avec une description libre — « ambiance road trip de nuit »,
+          « énergique pour courir »…
         </p>
-        <div class="tool-list">
-          <div class="tool-item"><code>list_genres()</code><span>Genres Deezer disponibles, pour cibler un chart</span></div>
-          <div class="tool-item"><code>get_chart_tracks(genre_id, limit)</code><span>Titres populaires du moment, globalement ou par genre</span></div>
-        </div>
-      </div>
+        <div class="tool"><code>list_genres()</code><span>Genres disponibles, pour cibler un chart</span></div>
+        <div class="tool"><code>get_chart_tracks(genre_id, limit)</code><span>Titres populaires du moment, globalement ou par genre</span></div>
+      </article>
 
     </div>
   </div>
 </section>
 
-<section id="under-the-hood">
+<section id="engineering">
   <div class="wrap">
-    <h2>Sous le capot</h2>
-    <p class="section-sub">Quelques décisions qui ne se voient pas dans une démo mais qui tiennent le serveur debout.</p>
-    <div class="highlights">
-      <div class="highlight">
-        <h4>Erreurs toujours en HTTP 200</h4>
-        <p>Deezer répond 200 même en cas d'erreur logique — chaque requête vérifie systématiquement la clé <code>error</code> du payload plutôt que de se fier au status code.</p>
+    <div class="sec-head">
+      <span class="kicker">Ingénierie</span>
+      <h2>Sous le capot</h2>
+      <p class="sec-sub">Les décisions qu'une démo ne montre pas, mais qui tiennent le serveur debout.</p>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <h4>Des erreurs en HTTP&nbsp;200</h4>
+        <p>L'API répond 200 même en cas d'erreur logique. Chaque requête vérifie donc la clé <code>error</code> du payload au lieu de se fier au code de statut.</p>
       </div>
-      <div class="highlight">
-        <h4>Résolution par popularité, pas par pertinence</h4>
-        <p>Chercher "Justice" par nom peut renvoyer un homonyme à 1 000 fans avant le vrai groupe à 800 000 — la résolution retient le candidat avec le plus de <code>nb_fan</code>, pas le premier résultat.</p>
+      <div class="card">
+        <h4>Popularité plutôt que pertinence</h4>
+        <p>Chercher « Justice » par nom peut renvoyer un homonyme à 1&nbsp;000 fans avant le groupe à 800&nbsp;000. La résolution retient le plus fort <code>nb_fan</code>, pas le premier résultat.</p>
       </div>
-      <div class="highlight">
+      <div class="card">
         <h4>32 tests, zéro réseau réel</h4>
-        <p>Suite <code>pytest</code> avec <code>respx</code> au niveau du transport <code>httpx</code> — shaping des données, gestion d'erreur, et logique des tools composites couverts sans dépendance au vrai réseau.</p>
+        <p>Suite <code>pytest</code> avec <code>respx</code> branché au niveau du transport <code>httpx</code> — mise en forme, gestion d'erreur et tools composites couverts sans dépendre du réseau.</p>
       </div>
-      <div class="highlight">
+      <div class="card">
         <h4>CI sur chaque push</h4>
-        <p>GitHub Actions : <code>ruff check</code>, <code>ruff format --check</code>, puis <code>pytest</code> — à chaque push et pull request sur <code>main</code>.</p>
+        <p>GitHub Actions enchaîne <code>ruff check</code>, <code>ruff format --check</code> puis <code>pytest</code>, à chaque push et pull request sur <code>main</code>.</p>
       </div>
     </div>
   </div>
@@ -330,7 +427,16 @@
 
 <footer>
   <div class="wrap">
-    <p><a href="https://github.com/LucienLaumont/Deezer-MCP">github.com/LucienLaumont/Deezer-MCP</a></p>
+    <div class="attribution">
+      <span class="dot" aria-hidden="true"></span>
+      <span>Propulsé par l'API <strong>Deezer</strong></span>
+    </div>
+    <p class="disclaimer">
+      Projet personnel et indépendant, sans lien avec Deezer. Deezer est une marque
+      déposée de Deezer&nbsp;S.A. ; ce serveur consomme uniquement les endpoints publics
+      de lecture de son API, et n'est ni affilié, ni sponsorisé, ni approuvé par Deezer.
+    </p>
+    <p class="footer-link"><a href="https://github.com/LucienLaumont/Deezer-MCP">github.com/LucienLaumont/Deezer-MCP</a></p>
   </div>
 </footer>
 
