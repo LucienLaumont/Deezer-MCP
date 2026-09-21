@@ -61,6 +61,32 @@ class DeezerClient:
         payload = await self._get(f"/artist/{artist_id}/top", {"limit": limit})
         return [self._shape_track(item) for item in payload["data"]]
 
+    async def get_artist(self, artist_id: int) -> dict:
+        payload = await self._get(f"/artist/{artist_id}")
+        return self._shape_artist(payload)
+
+    async def get_related_artists(self, artist_id: int, limit: int = 5) -> list[dict]:
+        payload = await self._get(f"/artist/{artist_id}/related", {"limit": limit})
+        return [self._shape_artist(item) for item in payload["data"]]
+
+    async def get_artist_profile(
+        self, artist_id: int, top_tracks_limit: int = 10, related_limit: int = 5
+    ) -> dict:
+        artist = await self.get_artist(artist_id)
+        top_tracks = await self.get_artist_top_tracks(artist_id, top_tracks_limit)
+        related_artists = await self.get_related_artists(artist_id, related_limit)
+        return {"artist": artist, "top_tracks": top_tracks, "related_artists": related_artists}
+
+    async def get_genres(self) -> list[dict]:
+        payload = await self._get("/genre")
+        return [self._shape_genre(item) for item in payload["data"]]
+
+    async def get_chart_tracks(self, genre_id: int | None = None, limit: int = 10) -> list[dict]:
+        path = f"/chart/{genre_id}" if genre_id is not None else "/chart"
+        payload = await self._get(path, {"limit": limit})
+        tracks = payload.get("tracks", {}).get("data", [])
+        return [self._shape_track(item) for item in tracks[:limit]]
+
     @staticmethod
     def _shape_track(raw: dict) -> dict:
         artist = raw.get("artist") or {}
@@ -111,4 +137,12 @@ class DeezerClient:
             "nb_album": raw.get("nb_album"),
             "picture": raw.get("picture_medium"),
             "link": raw.get("link"),
+        }
+
+    @staticmethod
+    def _shape_genre(raw: dict) -> dict:
+        return {
+            "id": raw["id"],
+            "name": raw["name"],
+            "picture": raw.get("picture_medium"),
         }

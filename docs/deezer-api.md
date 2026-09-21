@@ -156,6 +156,7 @@ Champs clés : `id`, `title`, `description`, `public` (les playlists privées ne
 - **Ne pas cacher les URLs `preview`** trop longtemps (elles expirent), les resservir "fraîches" à chaque appel de tool.
 - **Filtrer par pays si besoin** via `available_countries`, pertinent si on veut prévenir l'utilisateur qu'un titre pourrait ne pas être lisible partout.
 - Outils MCP naturels à exposer : `search_tracks`, `get_track`, `get_album`, `get_artist_top_tracks`, `get_playlist` — chacun un wrapper mince autour d'un endpoint, avec le `preview` remonté explicitement pour l'écoute côté client (Artifact `<audio>` ou lien direct).
+- Deux tools supplémentaires implémentés au-delà du mapping 1 endpoint = 1 tool : `get_artist_profile` (composite : `/artist/{id}` + `/artist/{id}/top` + `/artist/{id}/related` en un seul appel) et le duo `list_genres`/`get_chart_tracks` (`/genre` + `/chart` + `/chart/{genre_id}`) pour laisser le modèle composer une playlist par ambiance sans NLP côté serveur.
 
 ## Sources
 - [Deezer API Rate limit · Issue #6 · BackInBash/DeezerSync](https://github.com/BackInBash/DeezerSync/issues/6)

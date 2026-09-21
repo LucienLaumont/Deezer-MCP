@@ -2,7 +2,7 @@
 
 Serveur MCP (Model Context Protocol) exposant le catalogue public Deezer — recherche de titres/albums/artistes et écoute des previews audio 30s — à des clients compatibles MCP comme Claude.
 
-Statut : 6 tools implémentés et testés en conditions réelles, déployé sur Render (transport `streamable-http`), testé avec succès dans claude.ai et Claude Code.
+Statut : 9 tools implémentés et testés en conditions réelles, déployé sur Render (transport `streamable-http`), testé avec succès dans claude.ai et Claude Code.
 
 Testé en conditions réelles avec `search_artists` → `get_artist_top_tracks` via Claude Code : le modèle choisit correctement le bon tool, désambiguïse les homonymes via `nb_fan`, et récupère des previews. Testé aussi sur claude.ai : le lien de preview renvoyé s'ouvre et joue correctement dans le navigateur.
 
@@ -16,6 +16,9 @@ Testé en conditions réelles avec `search_artists` → `get_artist_top_tracks` 
 | `get_track(track_id)` | Détails d'un titre + preview audio |
 | `get_album(album_id)` | Détails d'un album + tracklist complète (previews incluses) |
 | `get_artist_top_tracks(artist_id, limit=10)` | Titres les plus populaires d'un artiste |
+| `get_artist_profile(artist_id=None, artist_name=None, ...)` | Tool composite : fiche artiste + top titres + artistes similaires en un seul appel. Accepte un ID ou un nom (résolu vers le candidat le plus populaire) |
+| `list_genres()` | Liste des genres Deezer (id + nom), pour cibler `get_chart_tracks` |
+| `get_chart_tracks(genre_id=None, limit=10)` | Titres populaires du moment, globalement ou par genre — matière première pour une playlist par ambiance composée par le modèle |
 
 Chaque tool renvoie des champs "propres" (id, title, artist, album, duration, `preview`, link) plutôt que la réponse brute Deezer — la logique de nettoyage vit dans `DeezerClient`.
 
@@ -45,7 +48,11 @@ Comme il n'y a pas de fix possible côté serveur MCP à ce problème — il vit
 src/deezer_mcp/
 ├── server.py           # instance MCPServer, câblage des tools, point d'entrée
 ├── deezer_client.py     # client HTTP vers api.deezer.com + nettoyage des réponses
-└── tools/               # un fichier par groupe de tools (search, tracks, albums, artists)
+└── tools/               # un fichier par groupe de tools (search, tracks, albums, artists, discovery)
+tests/
+├── factories.py         # constructeurs de payloads Deezer bruts pour les tests
+├── test_deezer_client.py # DeezerClient : shaping, gestion d'erreur, mocké via respx
+└── test_tools.py         # tools MCP : câblage + logique propre aux tools composites
 docs/
 └── deezer-api.md        # doc de référence de l'API Deezer, vérifiée en direct
 ```
@@ -55,8 +62,16 @@ docs/
 ```bash
 python -m venv .venv
 .venv\Scripts\activate   # Windows
-pip install -e .
+pip install -e ".[dev]"   # inclut pytest/respx pour lancer les tests
 ```
+
+## Tests
+
+```bash
+pytest
+```
+
+Aucune requête réseau réelle : `DeezerClient` est mocké via `respx` (au niveau transport `httpx`), y compris pour les tools appelés via `mcp.call_tool()` en mémoire.
 
 ## Lancer le serveur
 

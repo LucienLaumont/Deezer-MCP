@@ -4,8 +4,8 @@ Pistes pour renforcer le projet côté portfolio (automatisation, qualité, maî
 
 ## 1. Tests + CI (priorité)
 
-- [ ] Suite de tests `pytest` pour `DeezerClient` : mocker `httpx` (via `httpx.MockTransport` ou `respx`) pour tester `_shape_track`/`_shape_album`/`_shape_artist` et la gestion d'erreur (`DeezerAPIError`) sans dépendre du vrai réseau.
-- [ ] Tests des tools eux-mêmes (appel direct des fonctions enregistrées, ou via un client MCP en mémoire).
+- [x] Suite de tests `pytest` pour `DeezerClient` (`tests/test_deezer_client.py`, mock `httpx` via `respx`) : `_shape_track`/`_shape_album`/`_shape_artist`/`_shape_genre`, la gestion d'erreur (`DeezerAPIError` sur payload `error`, HTTP error, erreur réseau) et les nouvelles méthodes composites/chart/genre, sans dépendre du vrai réseau.
+- [x] Tests des tools eux-mêmes (`tests/test_tools.py`, via `mcp.call_tool()` en mémoire) : câblage de chaque tool au client, et logique propre aux tools composites (résolution par nom la plus populaire, validation des paramètres de `get_artist_profile`).
 - [ ] Pipeline GitHub Actions (`.github/workflows/ci.yml`) : install, lint (`ruff`?), tests, à chaque push/PR sur `main`.
 - [ ] Badge de statut CI dans le README une fois en place.
 
@@ -31,8 +31,8 @@ Le projet n'utilise que des *tools*. Explorer les deux autres primitives du prot
 
 Scope validé — deux nouveaux tools, tous deux basés sur des endpoints Deezer déjà documentés mais jamais wrappés (`docs/deezer-api.md` §3.4, §3.6) :
 
-- [ ] **Fiche artiste enrichie** (tool composite) : enchaîne côté serveur `search_artists` (ou un ID direct) → `get_artist_top_tracks` → `/artist/{id}/related` (artistes similaires), renvoyés en une seule réponse. Illustre une orchestration pensée pour réduire les aller-retours du modèle, pas juste un mapping 1 endpoint = 1 tool.
-- [ ] **Générateur de playlist par ambiance** : à partir d'une description en langage naturel ("musique énergique pour courir"), exposer les bons blocs (`/chart`, `/chart/{genre_id}`, `/genre`) pour que le modèle compose lui-même une sélection cohérente. L'intelligence reste côté modèle ; le tool fournit la matière première pertinente (charts par genre) plutôt que de faire du NLP côté serveur.
+- [x] **Fiche artiste enrichie** (tool composite) : `get_artist_profile` enchaîne côté serveur `get_artist` → `get_artist_top_tracks` → `/artist/{id}/related` (artistes similaires), renvoyés en une seule réponse. Accepte `artist_id` ou `artist_name` (résolution auto par nb de fans, le tri par pertinence Deezer n'étant pas fiable pour repérer l'artiste le plus connu).
+- [x] **Générateur de playlist par ambiance** : `list_genres` + `get_chart_tracks` (`/genre`, `/chart`, `/chart/{genre_id}`) exposés pour que le modèle compose lui-même une sélection cohérente à partir d'une description en langage naturel. L'intelligence reste côté modèle ; le tool fournit la matière première (charts par genre) plutôt que de faire du NLP côté serveur.
 
 Pas retenu pour l'instant (mis en pause, pas abandonné) : profondeur protocole (resources/prompts/elicitation/sampling) et brique ML (recherche par embeddings) — cf. section 2 plus haut, à reprendre après ces deux tools.
 
@@ -40,5 +40,11 @@ Pas retenu pour l'instant (mis en pause, pas abandonné) : profondeur protocole 
 
 - [ ] Page statique de présentation du projet une fois les deux tools ci-dessus en place.
 - [ ] **Vidéo réelle** capturée d'une session Claude utilisant le MCP (recherche, previews, fiche artiste, playlist par ambiance) — pas de faux live chat, GitHub Pages est statique.
-- [ ] **Effet "transcript animé"** : rejouer en CSS/JS un vrai échange déjà eu (texte réel, pas inventé), avec apparition progressive façon frappe — donne un effet démo vivant sans backend ni clé API exposée.
 - [ ] Explicitement exclu : chat live embarqué dans la page (nécessiterait un backend proxy + gestion de coût/abus — hors scope pour une page de démo statique).
+
+**Format de la vidéo** (référence : démo Blender MCP, en plus lent) :
+- Chat en plein écran (Claude Desktop ou claude.ai), pas de split-screen.
+- Vraie interaction tapée en direct (pas un agent autonome qui s'exécute seul) — l'utilisateur pose chaque question à la main.
+- Aucune narration parlée : silence pendant la capture, avec de vraies pauses volontaires après chaque réponse pour laisser de la place aux captions ajoutées au montage.
+- Chaque tool call déplié manuellement (repliés par défaut dans l'UI Claude) et laissé assez longtemps à l'écran pour être lisible avant de couper — c'est ce qui donne le rythme "lent" et la lisibilité des appels d'outils.
+- Montage (CapCut ou DaVinci Resolve, gratuits sur Windows) : captions texte synchronisées sur les pauses, zoom ciblé sur les blocs de tool call / réponses clés.
