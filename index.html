@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Deezer MCP — le catalogue Deezer branché sur ton assistant</title>
 <meta name="description" content="Serveur MCP open source exposant le catalogue public Deezer — recherche, fiches artistes, charts par genre et previews 30 s — à Claude et aux clients compatibles MCP. Projet indépendant, non affilié à Deezer.">
-<meta name="theme-color" content="#0A0710">
+<meta name="theme-color" content="#150E24">
 <meta property="og:title" content="Deezer MCP">
 <meta property="og:description" content="9 tools MCP pour explorer le catalogue Deezer depuis ton assistant. Projet indépendant.">
 <meta property="og:type" content="website">
@@ -30,18 +30,18 @@
 }
 
 :root {
-  --bg:        #0A0710;
-  --bg-soft:   #100A1B;
-  --card:      rgba(255, 255, 255, .032);
-  --card-hi:   rgba(255, 255, 255, .055);
-  --line:      rgba(255, 255, 255, .09);
-  --line-hi:   rgba(255, 255, 255, .16);
+  --bg:        #150E24;
+  --bg-soft:   #1D1432;
+  --card:      rgba(255, 255, 255, .045);
+  --card-hi:   rgba(255, 255, 255, .075);
+  --line:      rgba(255, 255, 255, .11);
+  --line-hi:   rgba(255, 255, 255, .19);
   --accent:    #A238FF;
   --accent-dk: #6E20C4;
   --accent-lt: #C98BFF;
-  --text:      #F3EFF9;
-  --muted:     #9A92AD;
-  --dim:       #6E6681;
+  --text:      #F5F2FA;
+  --muted:     #AFA7C2;
+  --dim:       #9A90AE;
   --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
   --maxw: 1340px;
   --r: 16px;
@@ -52,7 +52,11 @@ html { scroll-behavior: smooth; scroll-padding-top: 90px; }
 
 body {
   margin: 0;
-  background: var(--bg);
+  /* Halo violet en haut de page : évite l'aplat noir uniforme. */
+  background:
+    radial-gradient(1400px 700px at 50% -15%, #2E1D4E, transparent 72%),
+    var(--bg);
+  background-attachment: fixed;
   color: var(--text);
   font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 16px;
@@ -75,15 +79,16 @@ a { color: inherit; }
   transform: translateZ(0);
   contain: strict;
 }
-.orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; }
-.orb-1 { width: 620px; height: 620px; top: -220px; left: -160px;
-         background: radial-gradient(circle at 35% 35%, #7B2FFF, transparent 68%); }
-.orb-2 { width: 540px; height: 540px; top: -80px; right: -180px;
-         background: radial-gradient(circle at 60% 40%, #C2185B, transparent 66%); opacity: .34; }
-.orb-3 { width: 700px; height: 700px; top: 780px; left: 42%;
-         background: radial-gradient(circle at 50% 50%, #4A1D96, transparent 70%); opacity: .38; }
+.orb { position: absolute; border-radius: 50%; filter: blur(95px); opacity: .72; }
+.orb-1 { width: 720px; height: 720px; top: -240px; left: -180px;
+         background: radial-gradient(circle at 35% 35%, #9D4EFF, transparent 68%); }
+.orb-2 { width: 620px; height: 620px; top: -110px; right: -200px;
+         background: radial-gradient(circle at 60% 40%, #E0407A, transparent 66%); opacity: .5; }
+.orb-3 { width: 820px; height: 820px; top: 720px; left: 40%;
+         background: radial-gradient(circle at 50% 50%, #6B33C9, transparent 70%); opacity: .6; }
 
-.blobs { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; }
+/* Les blobs ne sont plus noirs : ils creusaient le fond au lieu de le nuancer. */
+.blobs { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .5; }
 
 /* Grain : casse le côté "dégradé plastique" des aplats flous.
    Pas de mix-blend-mode : un mode de fusion sur une surface plein écran
@@ -115,23 +120,28 @@ a { color: inherit; }
 /* ================= TOP BAR ================= */
 .topbar {
   position: sticky; top: 0; z-index: 50;
-  background: rgba(10, 7, 16, .72);
+  background: rgba(21, 14, 36, .74);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid transparent;
   transition: border-color .25s, background .25s;
 }
-.topbar.scrolled { border-bottom-color: var(--line); background: rgba(10, 7, 16, .9); }
+.topbar.scrolled { border-bottom-color: var(--line); background: rgba(21, 14, 36, .93); }
 .topbar .wrap { display: flex; align-items: center; gap: 28px; height: 66px; }
 
-.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em;
-         text-decoration: none; font-size: 15px; white-space: nowrap; }
-.brand-dot {
-  width: 11px; height: 11px; border-radius: 50%;
-  background: radial-gradient(circle at 32% 30%, #E4C6FF, var(--accent) 55%, var(--accent-dk));
-  box-shadow: 0 0 14px rgba(162, 56, 255, .85);
-  flex: none;
+.brand {
+  display: flex; align-items: baseline; gap: 7px;
+  font-weight: 800; font-stretch: 92%; letter-spacing: -.02em;
+  text-decoration: none; font-size: 17px; white-space: nowrap;
 }
+.brand span {
+  font-family: var(--mono); font-size: 12px; font-weight: 500;
+  letter-spacing: .06em; color: var(--accent-lt);
+  border: 1px solid rgba(162, 56, 255, .35); background: rgba(162, 56, 255, .1);
+  border-radius: 6px; padding: 2px 7px;
+  transition: background .2s, border-color .2s;
+}
+.brand:hover span { background: rgba(162, 56, 255, .2); border-color: var(--accent); }
 
 .navlinks { display: flex; gap: 4px; margin-left: auto; }
 .navlinks a {
@@ -249,10 +259,10 @@ h1 .grad {
 /* Fond opaque plutôt que backdrop-filter : la carte est animée en permanence,
    et un flou d'arrière-plan sur un élément qui bouge se recalcule à chaque frame. */
 .glass {
-  background: linear-gradient(165deg, #1E1430, #140E21);
+  background: linear-gradient(165deg, #30204C, #221739);
   border: 1px solid var(--line-hi);
   border-radius: 20px;
-  box-shadow: 0 30px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1);
+  box-shadow: 0 30px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.12);
   overflow: hidden;
 }
 
@@ -382,10 +392,10 @@ section { padding: 96px 0; position: relative; }
 
   /* Fond opaque : surtout PAS de backdrop-filter ici. Il forcerait le navigateur
      à recomposer l'arrière-plan à chaque frame de la rotation 3D. */
-  background: linear-gradient(165deg, #1C1329, #130D1E);
+  background: linear-gradient(165deg, #2C1D46, #1F1535);
   border: 1px solid var(--line-hi);
   border-radius: 20px;
-  box-shadow: 0 30px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08);
+  box-shadow: 0 30px 70px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.1);
   overflow: hidden;
 
   /* On n'anime que transform et opacity (composités par le GPU).
@@ -427,13 +437,13 @@ section { padding: 96px 0; position: relative; }
   position: absolute; top: 50%; translate: 0 -50%; z-index: 200;
   width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
   display: grid; place-items: center;
-  background: rgba(16, 10, 27, .82); color: var(--text);
+  background: rgba(40, 27, 63, .86); color: var(--text);
   border: 1px solid var(--line-hi);
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
   transition: background .2s, border-color .2s, transform .18s, opacity .2s;
 }
 .nav:hover { background: var(--accent); border-color: var(--accent); transform: scale(1.09); }
-.nav:disabled { opacity: .3; cursor: default; transform: none; background: rgba(16,10,27,.82); border-color: var(--line); }
+.nav:disabled { opacity: .3; cursor: default; transform: none; background: rgba(40,27,63,.86); border-color: var(--line); }
 .nav.prev { left: max(12px, calc(50% - 480px)); }
 .nav.next { right: max(12px, calc(50% - 480px)); }
 
@@ -588,8 +598,21 @@ footer { border-top: 1px solid var(--line); padding: 54px 0 40px; position: rela
 .foot-name { font-size: 1.05rem; font-weight: 700; margin-bottom: 5px; }
 .foot-mail { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; }
 .foot-mail:hover { color: var(--accent-lt); }
+/* Attribution de la source des données. Le logo n'est pas retouché :
+   c'est la version claire officielle, posée sur fond sombre sans altération. */
+.attrib {
+  display: inline-flex; align-items: center; gap: 14px;
+  margin-top: 34px; padding: 11px 18px 11px 16px;
+  border: 1px solid var(--line); border-radius: 12px;
+  background: var(--card); text-decoration: none;
+  transition: border-color .25s, background .25s;
+}
+.attrib:hover { border-color: rgba(162, 56, 255, .45); background: var(--card-hi); }
+.attrib span { font-size: 12.5px; color: var(--dim); }
+.attrib img { display: block; height: 26px; width: auto; }
+
 .legal {
-  margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--line);
+  margin-top: 26px; padding-top: 24px; border-top: 1px solid var(--line);
   font-size: 12.3px; color: var(--dim); line-height: 1.65;
 }
 .legal b { color: var(--muted); font-weight: 600; }
@@ -614,7 +637,7 @@ footer { border-top: 1px solid var(--line); padding: 54px 0 40px; position: rela
   .navlinks {
     position: absolute; top: 66px; left: 0; right: 0;
     flex-direction: column; gap: 0; padding: 10px 16px 16px;
-    background: rgba(10,7,16,.97); border-bottom: 1px solid var(--line);
+    background: rgba(21,14,36,.97); border-bottom: 1px solid var(--line);
     backdrop-filter: blur(18px); display: none;
   }
   .navlinks.open { display: flex; }
@@ -649,9 +672,9 @@ footer { border-top: 1px solid var(--line); padding: 54px 0 40px; position: rela
   <div class="orb orb-2"></div>
   <div class="orb orb-3"></div>
   <svg class="blobs" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
-    <path fill="#000" fill-opacity=".38" d="M-40,120 C180,20 340,180 520,120 C700,60 760,220 700,340 C640,460 420,420 260,470 C100,520 -60,420 -40,280 Z"/>
-    <path fill="#000" fill-opacity=".3" d="M1180,-40 C1320,40 1460,160 1420,320 C1380,480 1180,420 1080,340 C980,260 1000,100 1080,20 Z"/>
-    <path fill="#000" fill-opacity=".26" d="M820,620 C980,560 1180,640 1260,780 C1340,920 1120,980 940,940 C760,900 660,680 820,620 Z"/>
+    <path fill="#3A2260" fill-opacity=".5" d="M-40,120 C180,20 340,180 520,120 C700,60 760,220 700,340 C640,460 420,420 260,470 C100,520 -60,420 -40,280 Z"/>
+    <path fill="#4A2A72" fill-opacity=".4" d="M1180,-40 C1320,40 1460,160 1420,320 C1380,480 1180,420 1080,340 C980,260 1000,100 1080,20 Z"/>
+    <path fill="#33205A" fill-opacity=".45" d="M820,620 C980,560 1180,640 1260,780 C1340,920 1120,980 940,940 C760,900 660,680 820,620 Z"/>
   </svg>
   <div class="sphere sph-a"></div>
   <div class="sphere sph-b"></div>
@@ -662,7 +685,7 @@ footer { border-top: 1px solid var(--line); padding: 54px 0 40px; position: rela
 <!-- ============ TOP BAR ============ -->
 <header class="topbar" id="topbar">
   <div class="wrap">
-    <a class="brand" href="#top"><span class="brand-dot"></span>Deezer MCP</a>
+    <a class="brand" href="#top">Deezer<span>MCP</span></a>
     <button class="burger" id="burger" aria-label="Ouvrir le menu" aria-expanded="false">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
         <path d="M3 6h18M3 12h18M3 18h18"/>
@@ -1272,6 +1295,11 @@ footer { border-top: 1px solid var(--line); padding: 54px 0 40px; position: rela
         </a>
       </div>
     </div>
+
+    <a class="attrib" href="https://www.deezer.com" target="_blank" rel="noopener">
+      <span>Données fournies par l'API publique</span>
+      <img src="assets/deezer-logo-light.webp" alt="Deezer" width="88" height="34" loading="lazy">
+    </a>
 
     <p class="legal">
       <b>Projet personnel indépendant, sans aucun lien avec Deezer.</b>
