@@ -1,0 +1,1625 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Deezer MCP — le catalogue Deezer branché sur ton assistant</title>
+<meta name="description" content="Serveur MCP open source exposant le catalogue public Deezer — recherche, fiches artistes, charts par genre et previews 30 s — à Claude et aux clients compatibles MCP. Projet indépendant, non affilié à Deezer.">
+<meta name="theme-color" content="#0A0710">
+<meta property="og:title" content="Deezer MCP">
+<meta property="og:description" content="9 tools MCP pour explorer le catalogue Deezer depuis ton assistant. Projet indépendant.">
+<meta property="og:type" content="website">
+
+<style>
+/* ---------- Typographie : Archivo (SIL OFL 1.1), servie en local ---------- */
+@font-face {
+  font-family: "Archivo";
+  src: url("assets/fonts/archivo-latin.woff2") format("woff2-variations");
+  font-weight: 100 900; font-stretch: 62% 125%; font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+                 U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122,
+                 U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Archivo";
+  src: url("assets/fonts/archivo-latin-ext.woff2") format("woff2-variations");
+  font-weight: 100 900; font-stretch: 62% 125%; font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+                 U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF,
+                 U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  --bg:        #0A0710;
+  --bg-soft:   #100A1B;
+  --card:      rgba(255, 255, 255, .032);
+  --card-hi:   rgba(255, 255, 255, .055);
+  --line:      rgba(255, 255, 255, .09);
+  --line-hi:   rgba(255, 255, 255, .16);
+  --accent:    #A238FF;
+  --accent-dk: #6E20C4;
+  --accent-lt: #C98BFF;
+  --text:      #F3EFF9;
+  --muted:     #9A92AD;
+  --dim:       #6E6681;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --maxw: 1340px;
+  --r: 16px;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 90px; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Archivo", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+h1, h2, h3 { line-height: 1.08; margin: 0; letter-spacing: -.02em; }
+p { margin: 0; }
+a { color: inherit; }
+
+.wrap { width: 100%; max-width: var(--maxw); margin-inline: auto; padding-inline: 20px; }
+
+/* ================= DÉCOR DE FOND ================= */
+/* Couche 1 : aplats flous (les "orbs"). Couche 2 : blobs SVG. Couche 3 : grain. */
+.backdrop {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden;
+  /* Promu en couche GPU : le décor est peint une fois puis réutilisé tel quel. */
+  transform: translateZ(0);
+  contain: strict;
+}
+.orb { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .5; }
+.orb-1 { width: 620px; height: 620px; top: -220px; left: -160px;
+         background: radial-gradient(circle at 35% 35%, #7B2FFF, transparent 68%); }
+.orb-2 { width: 540px; height: 540px; top: -80px; right: -180px;
+         background: radial-gradient(circle at 60% 40%, #C2185B, transparent 66%); opacity: .34; }
+.orb-3 { width: 700px; height: 700px; top: 780px; left: 42%;
+         background: radial-gradient(circle at 50% 50%, #4A1D96, transparent 70%); opacity: .38; }
+
+.blobs { position: absolute; inset: 0; width: 100%; height: 100%; opacity: .55; }
+
+/* Grain : casse le côté "dégradé plastique" des aplats flous.
+   Pas de mix-blend-mode : un mode de fusion sur une surface plein écran
+   oblige le navigateur à refusionner la pile à chaque frame. */
+.grain {
+  position: absolute; inset: 0; opacity: .1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Sphères "glossy" : un radial-gradient avec le point lumineux décalé + ombre interne. */
+.sphere {
+  position: absolute; border-radius: 50%;
+  background:
+    radial-gradient(circle at 32% 26%, rgba(255,255,255,.55), rgba(255,255,255,.08) 24%, transparent 42%),
+    radial-gradient(circle at 70% 78%, rgba(162,56,255,.42), transparent 55%),
+    linear-gradient(150deg, #2A2438, #120D1C 65%);
+  box-shadow: inset -8px -10px 26px rgba(0,0,0,.65), 0 24px 60px rgba(0,0,0,.5);
+  will-change: transform;
+}
+.sph-a { width: 116px; height: 116px; top: 14%; right: 7%;  animation: float 13s ease-in-out infinite; }
+.sph-b { width: 58px;  height: 58px;  top: 40%; right: 26%; animation: float 9s ease-in-out infinite reverse; }
+.sph-c { width: 30px;  height: 30px;  top: 62%; right: 14%; animation: float 11s ease-in-out infinite; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  50%      { transform: translateY(-22px) translateX(10px); }
+}
+
+/* ================= TOP BAR ================= */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(10, 7, 16, .72);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid transparent;
+  transition: border-color .25s, background .25s;
+}
+.topbar.scrolled { border-bottom-color: var(--line); background: rgba(10, 7, 16, .9); }
+.topbar .wrap { display: flex; align-items: center; gap: 28px; height: 66px; }
+
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; letter-spacing: -.01em;
+         text-decoration: none; font-size: 15px; white-space: nowrap; }
+.brand-dot {
+  width: 11px; height: 11px; border-radius: 50%;
+  background: radial-gradient(circle at 32% 30%, #E4C6FF, var(--accent) 55%, var(--accent-dk));
+  box-shadow: 0 0 14px rgba(162, 56, 255, .85);
+  flex: none;
+}
+
+.navlinks { display: flex; gap: 4px; margin-left: auto; }
+.navlinks a {
+  text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 500;
+  padding: 7px 14px; border-radius: 999px; transition: color .2s, background .2s;
+}
+.navlinks a:hover { color: var(--text); background: var(--card-hi); }
+.navlinks a.active { color: var(--text); background: var(--card-hi); }
+
+.ghlink {
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+  font-size: 14px; font-weight: 600; padding: 8px 16px; border-radius: 999px;
+  border: 1px solid var(--line-hi); color: var(--text); transition: border-color .2s, background .2s;
+  white-space: nowrap;
+}
+.ghlink:hover { background: var(--card-hi); border-color: var(--accent); }
+
+.burger { display: none; background: none; border: 0; color: var(--text); cursor: pointer;
+          margin-left: auto; padding: 8px; border-radius: 10px; }
+.burger:hover { background: var(--card-hi); }
+
+/* ================= HERO ================= */
+main { position: relative; z-index: 1; }
+
+.hero { padding: 84px 0 104px; }
+.hero .wrap {
+  display: grid; grid-template-columns: 1.32fr .68fr; gap: 48px; align-items: center;
+}
+
+.eyebrow {
+  display: inline-flex; align-items: center; gap: 9px;
+  font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent-lt); margin-bottom: 26px;
+}
+.eyebrow::before {
+  content: ""; width: 26px; height: 1px; background: linear-gradient(90deg, transparent, var(--accent));
+}
+
+h1 {
+  font-size: clamp(2.4rem, 5vw, 3.9rem);
+  font-weight: 800; font-stretch: 90%;
+  text-wrap: balance;
+  margin-bottom: 24px;
+}
+h1 .grad {
+  background: linear-gradient(100deg, var(--accent-lt) 10%, var(--accent) 55%, #7B2FFF);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+.lede {
+  font-size: clamp(1rem, 1.55vw, 1.14rem); color: var(--muted);
+  max-width: none; text-align: justify; hyphens: auto;
+  margin-bottom: 26px;
+}
+.lede strong { color: var(--text); font-weight: 600; }
+
+/* Le disclaimer est dans le hero, pas relégué au pied de page. */
+.indep {
+  display: inline-flex; align-items: flex-start; gap: 10px;
+  border: 1px solid rgba(162, 56, 255, .3); background: rgba(162, 56, 255, .07);
+  border-radius: 12px; padding: 11px 15px; font-size: 13.5px; color: var(--muted);
+  margin-bottom: 30px; max-width: 46ch;
+}
+.indep svg { flex: none; margin-top: 2px; color: var(--accent-lt); }
+.indep b { color: var(--text); font-weight: 600; }
+
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 34px; }
+.btn {
+  display: inline-flex; align-items: center; gap: 9px; text-decoration: none;
+  font-size: 14.5px; font-weight: 600; padding: 13px 24px; border-radius: 999px;
+  transition: transform .18s, box-shadow .25s, background .2s, border-color .2s;
+}
+.btn:hover { transform: translateY(-2px); }
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dk));
+  color: #fff; box-shadow: 0 8px 28px rgba(123, 47, 255, .38);
+}
+.btn-primary:hover { box-shadow: 0 14px 38px rgba(123, 47, 255, .52); }
+.btn-ghost { border: 1px solid var(--line-hi); color: var(--text); }
+.btn-ghost:hover { background: var(--card-hi); border-color: var(--accent); }
+
+/* Pastilles réseaux */
+.socials { display: flex; gap: 11px; }
+.socials a {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: grid; place-items: center;
+  border: 1px solid var(--line-hi); color: var(--muted);
+  transition: transform .2s, background .2s, color .2s, border-color .2s, box-shadow .25s;
+}
+.socials a:hover {
+  transform: translateY(-3px); color: #fff; border-color: transparent;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dk));
+  box-shadow: 0 8px 22px rgba(123, 47, 255, .42);
+}
+
+.stats { display: flex; flex-wrap: wrap; gap: 10px 26px; margin-top: 34px;
+         padding-top: 26px; border-top: 1px solid var(--line); }
+.stat { display: flex; align-items: baseline; gap: 8px; }
+.stat b { font-size: 1.35rem; font-weight: 800; letter-spacing: -.02em; }
+.stat span { font-size: 12.5px; color: var(--dim); }
+
+/* ---------- Carte flottante du hero ---------- */
+.hero-card-wrap { perspective: 1400px; }
+.hero-card {
+  transform: rotateY(-9deg) rotateX(3deg);
+  transition: transform .5s cubic-bezier(.22,.9,.3,1);
+  animation: cardfloat 8s ease-in-out infinite;
+}
+.hero-card:hover { transform: rotateY(-3deg) rotateX(1deg) translateY(-6px); }
+@keyframes cardfloat {
+  0%, 100% { translate: 0 0; }
+  50%      { translate: 0 -14px; }
+}
+
+/* Fond opaque plutôt que backdrop-filter : la carte est animée en permanence,
+   et un flou d'arrière-plan sur un élément qui bouge se recalcule à chaque frame. */
+.glass {
+  background: linear-gradient(165deg, #1E1430, #140E21);
+  border: 1px solid var(--line-hi);
+  border-radius: 20px;
+  box-shadow: 0 30px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.1);
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 17px; border-bottom: 1px solid var(--line);
+  background: rgba(0,0,0,.24);
+}
+.pulse {
+  width: 7px; height: 7px; border-radius: 50%; background: #3DDC84; flex: none;
+  box-shadow: 0 0 0 0 rgba(61, 220, 132, .6); animation: pulse 2.4s infinite;
+}
+@keyframes pulse {
+  70%  { box-shadow: 0 0 0 9px rgba(61, 220, 132, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(61, 220, 132, 0); }
+}
+.card-head code { font-family: var(--mono); font-size: 12.5px; color: var(--accent-lt); }
+.card-head .ms { margin-left: auto; font-family: var(--mono); font-size: 11px; color: var(--dim); }
+
+.artist-head { display: flex; align-items: center; gap: 14px; padding: 18px 17px 14px; }
+.avatar {
+  width: 52px; height: 52px; border-radius: 14px; flex: none;
+  display: grid; place-items: center; font-weight: 800; font-size: 1.15rem; color: #fff;
+  background: linear-gradient(140deg, var(--accent), var(--accent-dk));
+  box-shadow: 0 6px 18px rgba(123,47,255,.4);
+}
+.artist-head h3 { font-size: 1.22rem; font-weight: 800; }
+.artist-head .meta { font-size: 12.5px; color: var(--dim); margin-top: 3px; }
+
+.tracklist { padding: 4px 8px 8px; }
+.track {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 9px; border-radius: 11px; text-decoration: none;
+  transition: background .18s;
+}
+.track:hover { background: var(--card-hi); }
+.track .idx { font-family: var(--mono); font-size: 11.5px; color: var(--dim); width: 15px; flex: none; }
+.track .t-main { min-width: 0; flex: 1; }
+.track .t-title { font-size: 13.8px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track .t-sub { font-size: 11.5px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track .dur { font-family: var(--mono); font-size: 11.5px; color: var(--muted); flex: none; }
+/* ---------- Lecteur de preview ----------
+   Les boutons sont injectés par JS à partir des liens Deezer déjà présents :
+   sans JS, chaque ligne reste un lien qui fonctionne. */
+.rowwrap { display: flex; align-items: center; gap: 2px; }
+.rowwrap > a { flex: 1; min-width: 0; }
+
+.play {
+  width: 28px; height: 28px; padding: 0; flex: none;
+  border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  background: none; border: 1px solid var(--line-hi); color: var(--muted);
+  transition: background .2s, border-color .2s, color .2s, transform .15s;
+  position: relative;
+}
+.play:hover { background: var(--accent); border-color: var(--accent); color: #fff; transform: scale(1.08); }
+.rowwrap:hover .play { border-color: var(--accent); color: var(--accent-lt); }
+.rowwrap:hover .play:hover { color: #fff; }
+
+.play .ico-pause, .play .ico-err { display: none; }
+.play[data-state="playing"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.play[data-state="playing"] .ico-play  { display: none; }
+.play[data-state="playing"] .ico-pause { display: block; }
+.play[data-state="error"] { border-color: #FF6B6B; color: #FF6B6B; }
+.play[data-state="error"] .ico-play { display: none; }
+.play[data-state="error"] .ico-err  { display: block; }
+
+/* Anneau de progression sur les 30 s, piloté par --p (0 → 1) */
+.play[data-state="playing"]::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  background: conic-gradient(var(--accent-lt) calc(var(--p, 0) * 360deg), transparent 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+          mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 2px));
+  pointer-events: none;
+}
+
+/* Chargement : l'anneau tourne en attendant la réponse de l'API */
+.play[data-state="loading"] { border-color: var(--accent); color: var(--accent-lt); }
+.play[data-state="loading"]::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  border: 2px solid transparent; border-top-color: var(--accent-lt);
+  animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.card-foot {
+  padding: 12px 17px 16px; border-top: 1px solid var(--line);
+  display: flex; flex-wrap: wrap; align-items: center; gap: 7px;
+}
+.card-foot .lbl { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .07em;
+                  width: 100%; margin-bottom: 3px; }
+.chip {
+  font-size: 11.5px; padding: 4px 11px; border-radius: 999px;
+  border: 1px solid var(--line-hi); color: var(--muted); white-space: nowrap;
+}
+.chip-accent { border-color: rgba(162,56,255,.4); color: var(--accent-lt); background: rgba(162,56,255,.08); }
+
+/* ================= SECTIONS ================= */
+section { padding: 96px 0; position: relative; }
+.sec-head { max-width: 62ch; margin-bottom: 48px; }
+.sec-tag {
+  font-family: var(--mono); font-size: 12px; color: var(--accent-lt);
+  letter-spacing: .06em; margin-bottom: 14px; display: block;
+}
+.sec-head h2 { font-size: clamp(1.9rem, 3.6vw, 2.7rem); font-weight: 800; margin-bottom: 14px; }
+.sec-head p { color: var(--muted); font-size: 1.02rem; }
+
+/* ---------- Carrousel des tools (coverflow) ---------- */
+.carousel { position: relative; margin-top: 8px; }
+
+.stage {
+  position: relative;
+  /* Hauteur figée par JS sur la plus haute des neuf cartes : le contenu
+     situé en dessous ne bouge plus d'une carte à l'autre. */
+  height: 470px;
+  perspective: 1800px;
+  perspective-origin: 50% 50%;
+  touch-action: pan-y;
+}
+
+/* Cartes alignées par le haut : une carte courte laisse son vide en bas. */
+.slide {
+  position: absolute; top: 0; left: 50%;
+  width: min(540px, 86vw);
+  margin: 0;
+  display: flex; flex-direction: column;
+  transform-origin: 50% 50%;
+
+  /* Fond opaque : surtout PAS de backdrop-filter ici. Il forcerait le navigateur
+     à recomposer l'arrière-plan à chaque frame de la rotation 3D. */
+  background: linear-gradient(165deg, #1C1329, #130D1E);
+  border: 1px solid var(--line-hi);
+  border-radius: 20px;
+  box-shadow: 0 30px 70px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.08);
+  overflow: hidden;
+
+  /* On n'anime que transform et opacity (composités par le GPU).
+     Le flou change sans transition : il est imperceptible pendant le mouvement. */
+  transition: transform .55s cubic-bezier(.22,.85,.28,1), opacity .35s linear;
+  will-change: transform, opacity;
+  backface-visibility: hidden;
+  contain: layout paint;
+
+  /* Seule la carte active reçoit les clics. */
+  pointer-events: none;
+}
+.slide.active { pointer-events: auto; }
+
+.slide-body { padding: 20px 22px 6px; }
+.slide-desc { font-size: 14.2px; color: var(--muted); line-height: 1.55; }
+.slide-desc b { color: var(--text); font-weight: 600; }
+
+.callline {
+  margin: 16px 22px 0;
+  font-family: var(--mono); font-size: 12.6px; color: var(--accent-lt);
+  background: rgba(0,0,0,.35); border: 1px solid var(--line);
+  border-radius: 10px; padding: 9px 13px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.slide-out { padding: 12px 14px 18px; }
+
+/* Les lignes respirent beaucoup plus qu'en grille. */
+.slide-out .row { padding: 10px 10px; }
+.slide-out .row .rt { font-size: 14.2px; }
+.slide-out .row .rs { font-size: 12px; }
+.slide-out .row .rd { font-size: 12px; }
+.slide-out .fanrow { padding: 11px 10px; }
+.slide-out .verdict { font-size: 12.8px; padding: 12px 10px 0; }
+
+/* Flèches */
+.nav {
+  position: absolute; top: 50%; translate: 0 -50%; z-index: 200;
+  width: 46px; height: 46px; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center;
+  background: rgba(16, 10, 27, .82); color: var(--text);
+  border: 1px solid var(--line-hi);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  transition: background .2s, border-color .2s, transform .18s, opacity .2s;
+}
+.nav:hover { background: var(--accent); border-color: var(--accent); transform: scale(1.09); }
+.nav:disabled { opacity: .3; cursor: default; transform: none; background: rgba(16,10,27,.82); border-color: var(--line); }
+.nav.prev { left: max(12px, calc(50% - 480px)); }
+.nav.next { right: max(12px, calc(50% - 480px)); }
+
+/* Pastilles */
+.dots { display: flex; justify-content: center; gap: 9px; margin-top: 30px; flex-wrap: wrap; }
+.dots button {
+  width: 9px; height: 9px; padding: 0; border-radius: 50%; cursor: pointer;
+  background: rgba(255,255,255,.16); border: 0;
+  transition: background .25s, width .25s;
+}
+.dots button:hover { background: rgba(255,255,255,.4); }
+.dots button[aria-current="true"] {
+  width: 28px; border-radius: 5px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-lt));
+}
+
+.counter {
+  text-align: center; margin-top: 16px;
+  font-family: var(--mono); font-size: 12px; color: var(--dim);
+}
+.counter b { color: var(--accent-lt); font-weight: 600; }
+
+/* Le badge de famille se cale à droite de l'en-tête de carte. */
+.card-head .fam { margin: 0 0 0 auto; }
+.card-head code { font-size: 13px; font-weight: 600; }
+.slide .chain { margin-top: 13px; }
+
+.glass-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  overflow: hidden;
+  transition: border-color .25s, transform .25s, background .25s;
+}
+.glass-card:hover { border-color: var(--line-hi); background: var(--card-hi); transform: translateY(-3px); }
+
+.fam {
+  display: inline-block; font-size: 10.5px; font-weight: 700; letter-spacing: .08em;
+  text-transform: uppercase; padding: 3px 9px; border-radius: 6px; margin-bottom: 11px;
+}
+.fam-search  { background: rgba(162, 56, 255, .14); color: #C98BFF; }
+.fam-detail  { background: rgba(56, 132, 255, .14); color: #7FB0FF; }
+.fam-discover{ background: rgba(255, 56, 162, .13); color: #FF8BC9; }
+
+.row {
+  display: flex; align-items: center; gap: 11px; padding: 7px 8px;
+  border-radius: 9px; text-decoration: none; transition: background .18s;
+}
+.row:hover { background: var(--card-hi); }
+.row .rk { font-family: var(--mono); font-size: 11px; color: var(--dim); width: 14px; flex: none; }
+.row .rmain { min-width: 0; flex: 1; }
+.row .rt { font-size: 13.2px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .rs { font-size: 11.2px; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row .rd { font-family: var(--mono); font-size: 11.2px; color: var(--muted); flex: none; }
+
+/* Barres de fans — la carte search_artists */
+.fanrow { display: flex; align-items: center; gap: 12px; padding: 9px 8px; border-radius: 9px; }
+.fanrow.win { background: rgba(162, 56, 255, .09); border: 1px solid rgba(162, 56, 255, .26); }
+.fanrow .fname { font-size: 13.2px; font-weight: 600; width: 92px; flex: none;
+                 white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar { flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,.07); overflow: hidden; }
+.bar i { display: block; height: 100%; border-radius: 3px;
+         background: linear-gradient(90deg, var(--accent-dk), var(--accent)); }
+.bar i.weak { background: rgba(255,255,255,.2); }
+.fanrow .fnum { font-family: var(--mono); font-size: 11.5px; color: var(--muted); flex: none; width: 74px; text-align: right; }
+.verdict { font-size: 12px; color: var(--muted); padding: 10px 8px 2px; line-height: 1.5; }
+.verdict b { color: var(--accent-lt); font-weight: 600; }
+
+/* Chips de genres */
+.genres { display: flex; flex-wrap: wrap; gap: 7px; }
+.gchip {
+  font-family: var(--mono); font-size: 11.5px; padding: 5px 10px; border-radius: 8px;
+  border: 1px solid var(--line); color: var(--muted); background: rgba(255,255,255,.02);
+  transition: all .2s;
+}
+.gchip:hover { border-color: var(--accent); color: var(--accent-lt); }
+.gchip .gid { color: var(--dim); }
+
+.chain { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.chain code {
+  font-family: var(--mono); font-size: 11.5px; padding: 4px 9px; border-radius: 7px;
+  background: rgba(162,56,255,.1); border: 1px solid rgba(162,56,255,.24); color: var(--accent-lt);
+}
+.chain .arw { color: var(--dim); font-size: 12px; }
+
+/* ================= DÉMO ================= */
+.demo-frame {
+  border-radius: 20px; overflow: hidden; border: 1px solid var(--line-hi);
+  box-shadow: 0 40px 90px rgba(0,0,0,.6);
+  background: #000; line-height: 0; position: relative;
+}
+.demo-frame video { width: 100%; height: auto; display: block; }
+.demo-note { margin-top: 16px; font-size: 13px; color: var(--dim); text-align: center; }
+
+/* ================= INSTALL ================= */
+.install { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+
+.code-block { position: relative; }
+.code-head {
+  display: flex; align-items: center; gap: 9px; padding: 11px 15px;
+  border-bottom: 1px solid var(--line); background: rgba(0,0,0,.26);
+}
+.code-head .fname { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+.copy {
+  margin-left: auto; background: none; border: 1px solid var(--line-hi); color: var(--muted);
+  font-family: inherit; font-size: 11.5px; font-weight: 600; padding: 5px 12px;
+  border-radius: 7px; cursor: pointer; transition: all .2s;
+}
+.copy:hover { color: var(--text); border-color: var(--accent); background: rgba(162,56,255,.1); }
+.copy.done { color: #3DDC84; border-color: #3DDC84; }
+
+pre {
+  margin: 0; padding: 17px; overflow-x: auto;
+  font-family: var(--mono); font-size: 12.8px; line-height: 1.65; color: #D6CFE3;
+}
+pre .k { color: #C98BFF; }
+pre .s { color: #8FD6A0; }
+
+.steps { list-style: none; margin: 0; padding: 0; counter-reset: s; }
+.steps li {
+  counter-increment: s; position: relative; padding: 0 0 22px 44px;
+  font-size: 14px; color: var(--muted);
+}
+.steps li::before {
+  content: counter(s); position: absolute; left: 0; top: -2px;
+  width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 12.5px; font-weight: 700; color: var(--accent-lt);
+  border: 1px solid rgba(162,56,255,.35); background: rgba(162,56,255,.08);
+}
+.steps li b { color: var(--text); font-weight: 600; display: block; margin-bottom: 3px; }
+.steps li code {
+  font-family: var(--mono); font-size: 12.5px; background: rgba(255,255,255,.05);
+  padding: 2px 6px; border-radius: 5px; color: var(--accent-lt);
+}
+
+.warn {
+  display: flex; gap: 11px; align-items: flex-start; margin-top: 18px;
+  border: 1px solid rgba(255, 184, 0, .22); background: rgba(255, 184, 0, .05);
+  border-radius: 12px; padding: 13px 15px; font-size: 13px; color: var(--muted);
+}
+.warn svg { flex: none; margin-top: 2px; color: #FFB800; }
+
+.stack { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 34px; }
+.tech {
+  font-size: 12.5px; font-weight: 500; padding: 7px 14px; border-radius: 999px;
+  border: 1px solid var(--line); color: var(--muted); background: var(--card);
+}
+
+/* ================= FOOTER ================= */
+footer { border-top: 1px solid var(--line); padding: 54px 0 40px; position: relative; z-index: 1; }
+.foot-grid { display: flex; flex-wrap: wrap; gap: 30px; justify-content: space-between; align-items: flex-start; }
+.foot-name { font-size: 1.05rem; font-weight: 700; margin-bottom: 5px; }
+.foot-mail { color: var(--muted); text-decoration: none; font-size: 14px; transition: color .2s; }
+.foot-mail:hover { color: var(--accent-lt); }
+.legal {
+  margin-top: 34px; padding-top: 24px; border-top: 1px solid var(--line);
+  font-size: 12.3px; color: var(--dim); line-height: 1.65;
+}
+.legal b { color: var(--muted); font-weight: 600; }
+
+/* ================= ANIMATION D'APPARITION ================= */
+.reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.8,.3,1); }
+.reveal.in { opacity: 1; transform: none; }
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 1000px) {
+  .hero .wrap { grid-template-columns: 1fr; gap: 52px; }
+  .hero-card { transform: none; animation: none; }
+  .hero-card:hover { transform: translateY(-4px); }
+  .nav.prev { left: 8px; }
+  .nav.next { right: 8px; }
+  .install { grid-template-columns: 1fr; }
+  .sph-a, .sph-b, .sph-c { display: none; }
+}
+@media (max-width: 720px) {
+  section { padding: 68px 0; }
+  .hero { padding: 56px 0 72px; }
+  .navlinks {
+    position: absolute; top: 66px; left: 0; right: 0;
+    flex-direction: column; gap: 0; padding: 10px 16px 16px;
+    background: rgba(10,7,16,.97); border-bottom: 1px solid var(--line);
+    backdrop-filter: blur(18px); display: none;
+  }
+  .navlinks.open { display: flex; }
+  .navlinks a { padding: 12px 14px; border-radius: 10px; }
+  .burger { display: block; }
+  .ghlink { display: none; }
+  .stage { perspective: 1200px; }   /* la hauteur est gérée par JS */
+  .slide { width: 90vw; }
+  .nav { width: 40px; height: 40px; }
+  .nav.prev { left: 2px; }
+  .nav.next { right: 2px; }
+  .slide-body { padding: 16px 18px 4px; }
+  .callline { margin: 12px 18px 0; font-size: 11.8px; }
+  .orb { filter: blur(70px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .reveal { opacity: 1; transform: none; }
+}
+
+:focus-visible { outline: 2px solid var(--accent-lt); outline-offset: 3px; border-radius: 6px; }
+</style>
+</head>
+
+<body>
+
+<!-- ============ DÉCOR ============ -->
+<div class="backdrop" aria-hidden="true">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+  <svg class="blobs" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <path fill="#000" fill-opacity=".38" d="M-40,120 C180,20 340,180 520,120 C700,60 760,220 700,340 C640,460 420,420 260,470 C100,520 -60,420 -40,280 Z"/>
+    <path fill="#000" fill-opacity=".3" d="M1180,-40 C1320,40 1460,160 1420,320 C1380,480 1180,420 1080,340 C980,260 1000,100 1080,20 Z"/>
+    <path fill="#000" fill-opacity=".26" d="M820,620 C980,560 1180,640 1260,780 C1340,920 1120,980 940,940 C760,900 660,680 820,620 Z"/>
+  </svg>
+  <div class="sphere sph-a"></div>
+  <div class="sphere sph-b"></div>
+  <div class="sphere sph-c"></div>
+  <div class="grain"></div>
+</div>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar" id="topbar">
+  <div class="wrap">
+    <a class="brand" href="#top"><span class="brand-dot"></span>Deezer MCP</a>
+    <button class="burger" id="burger" aria-label="Ouvrir le menu" aria-expanded="false">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+        <path d="M3 6h18M3 12h18M3 18h18"/>
+      </svg>
+    </button>
+    <nav class="navlinks" id="nav">
+      <a href="#tools">Les tools</a>
+      <a href="#demo">Démo</a>
+      <a href="#install">Installation</a>
+      <a href="#contact">Contact</a>
+    </nav>
+    <a class="ghlink" href="https://github.com/LucienLaumont/Deezer-MCP" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.9 18.3 5.2 18.3 5.2c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/>
+      </svg>
+      GitHub
+    </a>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="wrap">
+
+    <div>
+      <span class="eyebrow">Serveur Model Context Protocol</span>
+
+      <h1>Le catalogue <span class="grad">Deezer</span>,<br>branché sur ton assistant.</h1>
+
+      <p class="lede">
+        <strong>9 tools</strong> pour chercher des titres, déplier une fiche artiste ou composer
+        une playlist par ambiance, depuis Claude ou n'importe quel client MCP.
+      </p>
+
+      <div class="indep">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+        </svg>
+        <span><b>Projet indépendant.</b> Non affilié à Deezer, ni approuvé par Deezer.
+        Utilise uniquement l'API publique du catalogue.</span>
+      </div>
+
+      <div class="cta-row">
+        <a class="btn btn-primary" href="#demo">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+          Voir la démo
+        </a>
+        <a class="btn btn-ghost" href="#install">Installer</a>
+      </div>
+
+      <div class="socials">
+        <a href="mailto:laumontlucien@gmail.com" aria-label="Envoyer un e-mail">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            <rect x="2" y="4" width="20" height="16" rx="2.5"/><path d="m2.5 7 9.5 6.5L21.5 7"/>
+          </svg>
+        </a>
+        <a href="https://www.linkedin.com/in/lucien-laumont-39bb29290/" target="_blank" rel="noopener" aria-label="LinkedIn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM2.4 21h5.2V9.5H2.4V21zM9.6 9.5h5v1.6h.1c.7-1.2 2.3-2.1 4.2-2.1 4.1 0 4.9 2.5 4.9 5.9V21h-5.2v-5.1c0-1.3 0-2.9-1.9-2.9s-2.1 1.4-2.1 2.8V21H9.6V9.5z"/>
+          </svg>
+        </a>
+        <a href="https://github.com/LucienLaumont/Deezer-MCP" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.9 18.3 5.2 18.3 5.2c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/>
+          </svg>
+        </a>
+        <a href="https://lucienlaumont.github.io/portfolio/" target="_blank" rel="noopener" aria-label="Portfolio">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            <circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.5 2.6 3.8 6 3.8 9.5s-1.3 6.9-3.8 9.5c-2.5-2.6-3.8-6-3.8-9.5S9.5 5.1 12 2.5z"/>
+          </svg>
+        </a>
+      </div>
+
+      <div class="stats">
+        <div class="stat"><b>9</b><span>tools MCP</span></div>
+        <div class="stat"><b>0</b><span>clé API requise</span></div>
+        <div class="stat"><b>30 s</b><span>de preview par titre</span></div>
+      </div>
+    </div>
+
+    <!-- Carte flottante : sortie réelle de get_artist_profile("Kavinsky") -->
+    <div class="hero-card-wrap">
+      <div class="hero-card glass">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>get_artist_profile("Kavinsky")</code>
+          <span class="ms">200 OK</span>
+        </div>
+
+        <div class="artist-head">
+          <div class="avatar">K</div>
+          <div>
+            <h3>Kavinsky</h3>
+            <div class="meta">495 119 fans · 13 albums · artiste #13358</div>
+          </div>
+        </div>
+
+        <div class="tracklist">
+          <a class="track" href="https://www.deezer.com/track/2992806421" target="_blank" rel="noopener">
+            <span class="idx">1</span>
+            <span class="t-main">
+              <span class="t-title">Nightcall</span>
+              <span class="t-sub">feat. Angèle, Phoenix</span>
+            </span>
+            <span class="dur">2:59</span>
+            <span class="play"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+          </a>
+          <a class="track" href="https://www.deezer.com/track/64920072" target="_blank" rel="noopener">
+            <span class="idx">2</span>
+            <span class="t-main">
+              <span class="t-title">Nightcall</span>
+              <span class="t-sub">OutRun</span>
+            </span>
+            <span class="dur">4:19</span>
+            <span class="play"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+          </a>
+          <a class="track" href="https://www.deezer.com/track/64920076" target="_blank" rel="noopener">
+            <span class="idx">3</span>
+            <span class="t-main">
+              <span class="t-title">Roadgame</span>
+              <span class="t-sub">OutRun</span>
+            </span>
+            <span class="dur">3:44</span>
+            <span class="play"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+          </a>
+          <a class="track" href="https://www.deezer.com/track/68405882" target="_blank" rel="noopener">
+            <span class="idx">4</span>
+            <span class="t-main">
+              <span class="t-title">Odd Look</span>
+              <span class="t-sub">feat. The Weeknd</span>
+            </span>
+            <span class="dur">4:13</span>
+            <span class="play"><svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg></span>
+          </a>
+        </div>
+
+        <div class="card-foot">
+          <span class="lbl">Artistes similaires</span>
+          <span class="chip chip-accent">The Toxic Avenger</span>
+          <span class="chip">Danger</span>
+          <span class="chip">College</span>
+          <span class="chip">Lifelike</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ============ LES TOOLS ============ -->
+<section id="tools">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-tag">// 9 tools</span>
+      <h2>Ce que le serveur sait faire</h2>
+      <p>
+        Chaque tool renvoie des champs propres — jamais la réponse brute de l'API.
+        Les résultats ci-dessous sont de vraies réponses du serveur.
+      </p>
+    </div>
+  </div>
+
+  <div class="carousel reveal" id="carousel" role="region" aria-roledescription="carrousel"
+       aria-label="Les 9 tools du serveur" tabindex="0">
+
+    <div class="stage" id="stage">
+
+      <!-- 1 — search_artists -->
+      <article class="slide">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>search_artists</code>
+          <span class="fam fam-search">Recherche</span>
+        </div>
+        <div class="slide-body">
+          <p class="slide-desc">
+            Renvoie le nombre de fans de chaque candidat, ce qui permet de
+            <b>trancher entre homonymes</b> — même quand la requête est mal orthographiée.
+          </p>
+        </div>
+        <div class="callline">search_artists("kavinski")</div>
+        <div class="slide-out">
+          <div class="fanrow">
+            <span class="fname">Kavinski</span>
+            <span class="bar"><i class="weak" style="width:1%"></i></span>
+            <span class="fnum">46</span>
+          </div>
+          <div class="fanrow win">
+            <span class="fname">Kavinsky</span>
+            <span class="bar"><i style="width:100%"></i></span>
+            <span class="fnum">495 119</span>
+          </div>
+          <div class="fanrow">
+            <span class="fname">Mavins</span>
+            <span class="bar"><i class="weak" style="width:6%"></i></span>
+            <span class="fnum">27 928</span>
+          </div>
+          <p class="verdict">
+            L'homonyme à 46 fans sort <b>avant</b> le vrai Kavinsky dans le tri Deezer.
+          </p>
+        </div>
+      </article>
+
+      <!-- 2 — search_tracks -->
+      <article class="slide">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>search_tracks</code>
+          <span class="fam fam-search">Recherche</span>
+        </div>
+        <div class="slide-body">
+          <p class="slide-desc">
+            Des titres par texte libre. Piège documenté : chercher un artiste peut remonter
+            des morceaux où il n'est <b>que featuring</b>.
+          </p>
+        </div>
+        <div class="callline">search_tracks("Stromae", limit=3)</div>
+        <div class="slide-out">
+          <a class="row" href="https://www.deezer.com/track/4032295241" target="_blank" rel="noopener">
+            <span class="rk">1</span>
+            <span class="rmain"><span class="rt">des fleurs x stromae</span><span class="rs">Tove Lo — pas un titre de Stromae</span></span>
+            <span class="rd">2:52</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/6297555" target="_blank" rel="noopener">
+            <span class="rk">2</span>
+            <span class="rmain"><span class="rt">Alors on danse</span><span class="rs">Stromae · Cheese</span></span>
+            <span class="rd">3:28</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/3289333861" target="_blank" rel="noopener">
+            <span class="rk">3</span>
+            <span class="rmain"><span class="rt">Ma Meilleure Ennemie</span><span class="rs">Stromae · Arcane</span></span>
+            <span class="rd">2:27</span>
+          </a>
+        </div>
+      </article>
+
+      <!-- 3 — search_albums -->
+      <article class="slide">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>search_albums</code>
+          <span class="fam fam-search">Recherche</span>
+        </div>
+        <div class="slide-body">
+          <p class="slide-desc">
+            Des albums par titre ou par artiste, avec le nombre de pistes —
+            de quoi distinguer une réédition de l'album d'origine.
+          </p>
+        </div>
+        <div class="callline">search_albums("Random Access Memories")</div>
+        <div class="slide-out">
+          <a class="row" href="https://www.deezer.com/album/6575789" target="_blank" rel="noopener">
+            <span class="rk">1</span>
+            <span class="rmain"><span class="rt">Random Access Memories</span><span class="rs">Daft Punk · édition originale</span></span>
+            <span class="rd">13&nbsp;t.</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/album/438167857" target="_blank" rel="noopener">
+            <span class="rk">2</span>
+            <span class="rmain"><span class="rt">10th Anniversary Edition</span><span class="rs">Daft Punk</span></span>
+            <span class="rd">22&nbsp;t.</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/album/494309801" target="_blank" rel="noopener">
+            <span class="rk">3</span>
+            <span class="rmain"><span class="rt">Drumless Edition</span><span class="rs">Daft Punk</span></span>
+            <span class="rd">13&nbsp;t.</span>
+          </a>
+        </div>
+      </article>
+
+      <!-- 4 — get_track -->
+      <article class="slide">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>get_track</code>
+          <span class="fam fam-detail">Détail</span>
+        </div>
+        <div class="slide-body">
+          <p class="slide-desc">
+            La fiche complète d'un titre, <b>crédits de featuring inclus</b> —
+            l'information que la recherche ne fournit pas.
+          </p>
+        </div>
+        <div class="callline">get_track(3135553)</div>
+        <div class="slide-out">
+          <a class="row" href="https://www.deezer.com/track/3135553" target="_blank" rel="noopener">
+            <span class="rk">♪</span>
+            <span class="rmain"><span class="rt">One More Time</span><span class="rs">Daft Punk · Discovery</span></span>
+            <span class="rd">5:20</span>
+          </a>
+          <div class="genres" style="margin-top:14px;padding:0 10px">
+            <span class="gchip"><span class="gid">track_id</span> 3135553</span>
+            <span class="gchip"><span class="gid">album_id</span> 302127</span>
+            <span class="gchip"><span class="gid">duration</span> 320 s</span>
+            <span class="gchip"><span class="gid">preview</span> 30 s</span>
+          </div>
+          <p class="verdict">Clique sur ▶ : l'extrait est demandé à l'API au moment du clic.</p>
+        </div>
+      </article>
+
+      <!-- 5 — get_album -->
+      <article class="slide">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>get_album</code>
+          <span class="fam fam-detail">Détail</span>
+        </div>
+        <div class="slide-body">
+          <p class="slide-desc">
+            L'album, sa date de sortie et sa <b>tracklist complète</b> en un seul appel.
+          </p>
+        </div>
+        <div class="callline">get_album(302127) → Discovery · 2001-03-07 · 14 titres</div>
+        <div class="slide-out">
+          <a class="row" href="https://www.deezer.com/track/3135553" target="_blank" rel="noopener">
+            <span class="rk">1</span><span class="rmain"><span class="rt">One More Time</span></span><span class="rd">5:20</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/3135554" target="_blank" rel="noopener">
+            <span class="rk">2</span><span class="rmain"><span class="rt">Aerodynamic</span></span><span class="rd">3:32</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/3135555" target="_blank" rel="noopener">
+            <span class="rk">3</span><span class="rmain"><span class="rt">Digital Love</span></span><span class="rd">5:01</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/3135556" target="_blank" rel="noopener">
+            <span class="rk">4</span><span class="rmain"><span class="rt">Harder, Better, Faster, Stronger</span></span><span class="rd">3:46</span>
+          </a>
+          <p class="verdict">+ 10 autres titres</p>
+        </div>
+      </article>
+
+      <!-- 6 — get_artist_top_tracks -->
+      <article class="slide">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>get_artist_top_tracks</code>
+          <span class="fam fam-detail">Détail</span>
+        </div>
+        <div class="slide-body">
+          <p class="slide-desc">
+            Les titres les plus écoutés d'un artiste, <b>classés par popularité réelle</b>
+            et non par pertinence textuelle.
+          </p>
+        </div>
+        <div class="callline">get_artist_top_tracks(13358, limit=4)</div>
+        <div class="slide-out">
+          <a class="row" href="https://www.deezer.com/track/2992806421" target="_blank" rel="noopener">
+            <span class="rk">1</span><span class="rmain"><span class="rt">Nightcall</span><span class="rs">feat. Angèle, Phoenix</span></span><span class="rd">2:59</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/64920072" target="_blank" rel="noopener">
+            <span class="rk">2</span><span class="rmain"><span class="rt">Nightcall</span><span class="rs">OutRun · version originale</span></span><span class="rd">4:19</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/64920076" target="_blank" rel="noopener">
+            <span class="rk">3</span><span class="rmain"><span class="rt">Roadgame</span><span class="rs">OutRun</span></span><span class="rd">3:44</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/68405882" target="_blank" rel="noopener">
+            <span class="rk">4</span><span class="rmain"><span class="rt">Odd Look</span><span class="rs">feat. The Weeknd</span></span><span class="rd">4:13</span>
+          </a>
+        </div>
+      </article>
+
+      <!-- 7 — get_artist_profile -->
+      <article class="slide">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>get_artist_profile</code>
+          <span class="fam fam-discover">Composite</span>
+        </div>
+        <div class="slide-body">
+          <p class="slide-desc">
+            <b>Trois appels Deezer enchaînés côté serveur</b>, renvoyés en une seule réponse.
+            Accepte un nom brut : le candidat retenu est le plus suivi.
+          </p>
+          <div class="chain">
+            <code>/artist</code><span class="arw">→</span>
+            <code>/top</code><span class="arw">→</span>
+            <code>/related</code>
+            <span class="arw">= 1 réponse</span>
+          </div>
+        </div>
+        <div class="callline">get_artist_profile("Daft Punk")</div>
+        <div class="slide-out">
+          <div style="display:flex;align-items:center;gap:13px;padding:2px 10px 10px">
+            <div class="avatar" style="width:42px;height:42px;border-radius:12px;font-size:1rem">D</div>
+            <div>
+              <div style="font-weight:700;font-size:1.02rem">Daft Punk</div>
+              <div style="font-size:12px;color:var(--dim)">5 208 982 fans · 39 albums</div>
+            </div>
+          </div>
+          <a class="row" href="https://www.deezer.com/track/67238732" target="_blank" rel="noopener">
+            <span class="rk">1</span><span class="rmain"><span class="rt">Instant Crush</span><span class="rs">feat. Julian Casablancas</span></span><span class="rd">5:37</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/66609426" target="_blank" rel="noopener">
+            <span class="rk">2</span><span class="rmain"><span class="rt">Get Lucky</span><span class="rs">feat. Pharrell Williams, Nile Rodgers</span></span><span class="rd">4:08</span>
+          </a>
+          <div class="card-foot" style="border-top:1px solid var(--line);margin-top:8px">
+            <span class="lbl">Artistes similaires</span>
+            <span class="chip chip-accent">Justice</span>
+            <span class="chip">The Chemical Brothers</span>
+            <span class="chip">Cassius</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- 8 — list_genres -->
+      <article class="slide">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>list_genres</code>
+          <span class="fam fam-discover">Découverte</span>
+        </div>
+        <div class="slide-body">
+          <p class="slide-desc">
+            Les genres Deezer et leurs identifiants. C'est la <b>table de correspondance</b>
+            que le modèle consulte avant d'aller chercher un chart.
+          </p>
+        </div>
+        <div class="callline">list_genres() → 26 genres</div>
+        <div class="slide-out">
+          <div class="genres" style="padding:4px 10px">
+            <span class="gchip"><span class="gid">132</span> Pop</span>
+            <span class="gchip"><span class="gid">116</span> Rap/Hip Hop</span>
+            <span class="gchip"><span class="gid">152</span> Rock</span>
+            <span class="gchip"><span class="gid">106</span> Electro</span>
+            <span class="gchip"><span class="gid">113</span> Dance</span>
+            <span class="gchip"><span class="gid">129</span> Jazz</span>
+            <span class="gchip"><span class="gid">52</span> Chanson française</span>
+            <span class="gchip"><span class="gid">464</span> Metal</span>
+            <span class="gchip"><span class="gid">169</span> Soul &amp; Funk</span>
+            <span class="gchip"><span class="gid">197</span> Latino</span>
+            <span class="gchip"><span class="gid">98</span> Classique</span>
+            <span class="gchip"><span class="gid">144</span> Reggae</span>
+            <span class="gchip" style="color:var(--dim)">+ 14 autres</span>
+          </div>
+        </div>
+      </article>
+
+      <!-- 9 — get_chart_tracks -->
+      <article class="slide">
+        <div class="card-head">
+          <span class="pulse"></span>
+          <code>get_chart_tracks</code>
+          <span class="fam fam-discover">Découverte</span>
+        </div>
+        <div class="slide-body">
+          <p class="slide-desc">
+            Les titres du moment, par genre. Le serveur fournit la matière première —
+            <b>c'est le modèle qui compose la playlist</b>, pas le serveur.
+          </p>
+        </div>
+        <div class="callline">get_chart_tracks(genre_id=106) → Electro</div>
+        <div class="slide-out">
+          <a class="row" href="https://www.deezer.com/track/4019797791" target="_blank" rel="noopener">
+            <span class="rk">1</span><span class="rmain"><span class="rt">Movin' To The Sun</span><span class="rs">HUGEL</span></span><span class="rd">2:22</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/3784724892" target="_blank" rel="noopener">
+            <span class="rk">2</span><span class="rmain"><span class="rt">Talk To You</span><span class="rs">ANOTR</span></span><span class="rd">3:11</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/2992806421" target="_blank" rel="noopener">
+            <span class="rk">3</span><span class="rmain"><span class="rt">Nightcall</span><span class="rs">Kavinsky</span></span><span class="rd">2:59</span>
+          </a>
+          <a class="row" href="https://www.deezer.com/track/113876568" target="_blank" rel="noopener">
+            <span class="rk">4</span><span class="rmain"><span class="rt">Lean On</span><span class="rs">Major Lazer</span></span><span class="rd">2:57</span>
+          </a>
+        </div>
+      </article>
+
+    </div>
+
+    <button class="nav prev" id="prevBtn" type="button" aria-label="Tool précédent">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <button class="nav next" id="nextBtn" type="button" aria-label="Tool suivant">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+    </button>
+  </div>
+
+  <div class="wrap">
+    <div class="dots" id="dots"></div>
+    <p class="counter"><b id="curNum">1</b> / 9 — <span id="curName">search_artists</span></p>
+  </div>
+</section>
+
+<!-- ============ DÉMO ============ -->
+<section id="demo">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-tag">// session réelle</span>
+      <h2>En conditions réelles</h2>
+      <p>
+        Une conversation non coupée : le modèle choisit les tools, déplie la fiche artiste,
+        puis compose une playlist. Les extraits audio se jouent depuis la réponse.
+      </p>
+    </div>
+
+    <div class="demo-frame reveal">
+      <video controls preload="metadata" poster="assets/demo/poster.webp"
+             src="assets/demo/Deezer-MCP-Demo.mp4"
+             aria-label="Démonstration vidéo du serveur Deezer MCP dans Claude">
+        Votre navigateur ne peut pas lire cette vidéo.
+        <a href="assets/demo/Deezer-MCP-Demo.mp4">La télécharger</a>.
+      </video>
+    </div>
+    <p class="demo-note">1 min 38 · sans son · la vidéo ne se charge qu'au clic</p>
+  </div>
+</section>
+
+<!-- ============ INSTALLATION ============ -->
+<section id="install">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <span class="sec-tag">// 2 minutes</span>
+      <h2>Le brancher sur ton client</h2>
+      <p>Le serveur est déjà déployé. Rien à installer : il suffit de le déclarer.</p>
+    </div>
+
+    <div class="install">
+
+      <div class="glass-card code-block reveal">
+        <div class="code-head">
+          <span class="fname">.mcp.json</span>
+          <button class="copy" id="copyBtn" type="button">Copier</button>
+        </div>
+<pre id="cfg">{
+  <span class="k">"mcpServers"</span>: {
+    <span class="k">"deezer"</span>: {
+      <span class="k">"type"</span>: <span class="s">"http"</span>,
+      <span class="k">"url"</span>: <span class="s">"https://deezer-mcp.onrender.com/mcp"</span>
+    }
+  }
+}</pre>
+      </div>
+
+      <div class="reveal">
+        <ol class="steps">
+          <li>
+            <b>Déclarer le serveur</b>
+            Colle ce bloc dans le <code>.mcp.json</code> de ton projet, ou ajoute le connecteur
+            distant depuis les réglages de ton client.
+          </li>
+          <li>
+            <b>Redémarrer le client</b>
+            Les 9 tools apparaissent dans la liste des outils disponibles.
+          </li>
+          <li>
+            <b>Demander quelque chose</b>
+            « Fais-moi une fiche sur Kavinsky » ou « une playlist electro pour coder ».
+          </li>
+        </ol>
+
+        <div class="warn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/>
+          </svg>
+          <span>
+            Hébergé sur une instance gratuite qui se met en veille après inactivité :
+            le tout premier appel peut prendre une trentaine de secondes. Les suivants sont immédiats.
+          </span>
+        </div>
+
+        <div class="stack">
+          <span class="tech">Python</span>
+          <span class="tech">MCP SDK</span>
+          <span class="tech">httpx</span>
+          <span class="tech">pytest · respx</span>
+          <span class="tech">Ruff</span>
+          <span class="tech">GitHub Actions</span>
+          <span class="tech">Render</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer id="contact">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div>
+        <div class="foot-name">Lucien Laumont</div>
+        <a class="foot-mail" href="mailto:laumontlucien@gmail.com">laumontlucien@gmail.com</a>
+      </div>
+
+      <div class="socials">
+        <a href="mailto:laumontlucien@gmail.com" aria-label="Envoyer un e-mail">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            <rect x="2" y="4" width="20" height="16" rx="2.5"/><path d="m2.5 7 9.5 6.5L21.5 7"/>
+          </svg>
+        </a>
+        <a href="https://www.linkedin.com/in/lucien-laumont-39bb29290/" target="_blank" rel="noopener" aria-label="LinkedIn">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5zM2.4 21h5.2V9.5H2.4V21zM9.6 9.5h5v1.6h.1c.7-1.2 2.3-2.1 4.2-2.1 4.1 0 4.9 2.5 4.9 5.9V21h-5.2v-5.1c0-1.3 0-2.9-1.9-2.9s-2.1 1.4-2.1 2.8V21H9.6V9.5z"/>
+          </svg>
+        </a>
+        <a href="https://github.com/LucienLaumont/Deezer-MCP" target="_blank" rel="noopener" aria-label="GitHub">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 .3a12 12 0 0 0-3.8 23.4c.6.1.8-.3.8-.6v-2c-3.3.7-4-1.6-4-1.6-.6-1.4-1.4-1.8-1.4-1.8-1.1-.8.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0C17.3 4.9 18.3 5.2 18.3 5.2c.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .3z"/>
+          </svg>
+        </a>
+        <a href="https://lucienlaumont.github.io/portfolio/" target="_blank" rel="noopener" aria-label="Portfolio">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9">
+            <circle cx="12" cy="12" r="9.5"/><path d="M2.5 12h19M12 2.5c2.5 2.6 3.8 6 3.8 9.5s-1.3 6.9-3.8 9.5c-2.5-2.6-3.8-6-3.8-9.5S9.5 5.1 12 2.5z"/>
+          </svg>
+        </a>
+      </div>
+    </div>
+
+    <p class="legal">
+      <b>Projet personnel indépendant, sans aucun lien avec Deezer.</b>
+      Ce serveur n'est ni développé, ni soutenu, ni approuvé par Deezer S.A.
+      « Deezer » est une marque déposée de Deezer S.A., citée ici uniquement pour désigner
+      l'API publique interrogée. Seules des métadonnées publiques du catalogue sont exposées ;
+      aucun contenu audio n'est hébergé ni redistribué — les extraits et les liens pointent
+      vers Deezer. Typographie Archivo sous licence SIL Open Font License 1.1.
+    </p>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+
+  // Ombre de la top bar au défilement
+  var topbar = document.getElementById("topbar");
+  var onScroll = function () {
+    topbar.classList.toggle("scrolled", window.scrollY > 12);
+  };
+  onScroll();
+  window.addEventListener("scroll", onScroll, { passive: true });
+
+  // Menu mobile
+  var burger = document.getElementById("burger");
+  var nav = document.getElementById("nav");
+  burger.addEventListener("click", function () {
+    var open = nav.classList.toggle("open");
+    burger.setAttribute("aria-expanded", String(open));
+  });
+  nav.addEventListener("click", function (e) {
+    if (e.target.tagName === "A") {
+      nav.classList.remove("open");
+      burger.setAttribute("aria-expanded", "false");
+    }
+  });
+
+  // Lien de nav actif selon la section visible
+  var links = Array.prototype.slice.call(nav.querySelectorAll("a"));
+  var sections = links
+    .map(function (a) { return document.querySelector(a.getAttribute("href")); })
+    .filter(Boolean);
+
+  if ("IntersectionObserver" in window) {
+    var navObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        links.forEach(function (a) {
+          a.classList.toggle("active", a.getAttribute("href") === "#" + en.target.id);
+        });
+      });
+    }, { rootMargin: "-45% 0px -50% 0px" });
+    sections.forEach(function (s) { navObs.observe(s); });
+
+    // Apparition au défilement
+    var revObs = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (en.isIntersecting) {
+          en.target.classList.add("in");
+          revObs.unobserve(en.target);
+        }
+      });
+    }, { rootMargin: "0px 0px -8% 0px", threshold: 0.06 });
+
+    document.querySelectorAll(".reveal").forEach(function (el, i) {
+      el.style.transitionDelay = (Math.min(i, 5) * 55) + "ms";
+      revObs.observe(el);
+    });
+  } else {
+    document.querySelectorAll(".reveal").forEach(function (el) { el.classList.add("in"); });
+  }
+
+  /* ============================================================
+     Lecteur de previews 30 s
+     ------------------------------------------------------------
+     api.deezer.com ne renvoie pas d'en-tête Access-Control-Allow-Origin :
+     fetch() est bloqué par le navigateur. On passe donc par JSONP
+     (?output=jsonp&callback=), supporté officiellement par l'API.
+     L'URL de preview est demandée AU CLIC et non figée dans la page :
+     elle porte un jeton qui expire au bout de ~24 h.
+     ============================================================ */
+  var ICONS = {
+    play:  '<svg class="ico-play" width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>',
+    pause: '<svg class="ico-pause" width="9" height="9" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>',
+    err:   '<svg class="ico-err" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>'
+  };
+
+  var audio = new Audio();
+  audio.preload = "none";
+  audio.volume = 0.8;
+
+  var currentBtn = null;
+  var urlCache = {};   // id -> URL de preview obtenue pendant cette session
+
+  function setState(btn, state) {
+    if (!btn) return;
+    if (state) { btn.setAttribute("data-state", state); }
+    else { btn.removeAttribute("data-state"); btn.style.removeProperty("--p"); }
+  }
+
+  function stopCurrent() {
+    audio.pause();
+    setState(currentBtn, null);
+    currentBtn = null;
+  }
+
+  function jsonp(trackId) {
+    return new Promise(function (resolve, reject) {
+      var cb = "dzcb_" + Date.now() + "_" + Math.floor(Math.random() * 1e6);
+      var s = document.createElement("script");
+      var timer = setTimeout(function () { cleanup(); reject(new Error("timeout")); }, 9000);
+
+      function cleanup() {
+        clearTimeout(timer);
+        try { delete window[cb]; } catch (e) { window[cb] = undefined; }
+        if (s.parentNode) { s.parentNode.removeChild(s); }
+      }
+      window[cb] = function (data) { cleanup(); resolve(data); };
+      s.onerror = function () { cleanup(); reject(new Error("network")); };
+      s.src = "https://api.deezer.com/track/" + trackId + "?output=jsonp&callback=" + cb;
+      document.head.appendChild(s);
+    });
+  }
+
+  function playTrack(btn) {
+    var id = btn.getAttribute("data-id");
+
+    // Re-clic sur le titre en cours : on met en pause.
+    if (currentBtn === btn && !audio.paused) { stopCurrent(); return; }
+
+    stopCurrent();
+    currentBtn = btn;
+
+    var start = function (url) {
+      audio.src = url;
+      audio.play().then(function () {
+        setState(btn, "playing");
+      })["catch"](function () {
+        setState(btn, "error");
+        setTimeout(function () { if (currentBtn === btn) setState(btn, null); }, 2500);
+      });
+    };
+
+    if (urlCache[id]) { setState(btn, "playing"); start(urlCache[id]); return; }
+
+    setState(btn, "loading");
+    jsonp(id).then(function (data) {
+      if (currentBtn !== btn) return;          // l'utilisateur a cliqué ailleurs entre-temps
+      if (!data || !data.preview) { throw new Error("pas de preview"); }
+      urlCache[id] = data.preview;
+      start(data.preview);
+    })["catch"](function () {
+      if (currentBtn !== btn) return;
+      setState(btn, "error");
+      setTimeout(function () { if (currentBtn === btn) { setState(btn, null); currentBtn = null; } }, 2500);
+    });
+  }
+
+  audio.addEventListener("timeupdate", function () {
+    if (!currentBtn || !audio.duration) return;
+    currentBtn.style.setProperty("--p", (audio.currentTime / audio.duration).toFixed(3));
+  });
+  audio.addEventListener("ended", stopCurrent);
+
+  // Enrichissement progressif : on greffe un bouton sur chaque lien de titre.
+  document.querySelectorAll('a[href*="deezer.com/track/"]').forEach(function (link) {
+    var m = link.getAttribute("href").match(/track\/(\d+)/);
+    if (!m) return;
+
+    var deco = link.querySelector(".play");        // pastille décorative du hero
+    if (deco) { deco.parentNode.removeChild(deco); }
+
+    var titleEl = link.querySelector(".t-title") || link.querySelector(".rt");
+    var title = titleEl ? titleEl.textContent.trim() : "ce titre";
+
+    var wrap = document.createElement("div");
+    wrap.className = "rowwrap";
+    link.parentNode.insertBefore(wrap, link);
+    wrap.appendChild(link);
+
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "play";
+    b.setAttribute("data-id", m[1]);
+    b.setAttribute("title", "Écouter un extrait de 30 s");
+    b.setAttribute("aria-label", "Écouter un extrait de " + title);
+    b.innerHTML = ICONS.play + ICONS.pause + ICONS.err;
+    b.addEventListener("click", function (e) {
+      e.preventDefault();
+      playTrack(b);
+    });
+    wrap.appendChild(b);
+  });
+
+  /* ============================================================
+     Carrousel coverflow des tools
+     ============================================================ */
+  var stage = document.getElementById("stage");
+  if (stage) {
+    var slides = Array.prototype.slice.call(stage.querySelectorAll(".slide"));
+    var dotsBox = document.getElementById("dots");
+    var prevBtn = document.getElementById("prevBtn");
+    var nextBtn = document.getElementById("nextBtn");
+    var curNum = document.getElementById("curNum");
+    var curName = document.getElementById("curName");
+    var carousel = document.getElementById("carousel");
+    var index = 0;
+    var VISIBLE = 2;   // nombre de cartes visibles de chaque côté
+
+    var names = slides.map(function (s) {
+      var c = s.querySelector(".card-head code");
+      return c ? c.textContent.trim() : "";
+    });
+
+    // Pastilles
+    names.forEach(function (n, i) {
+      var d = document.createElement("button");
+      d.type = "button";
+      d.setAttribute("aria-label", "Aller au tool " + n);
+      d.addEventListener("click", function () { go(i); });
+      dotsBox.appendChild(d);
+    });
+    var dots = Array.prototype.slice.call(dotsBox.children);
+
+    // Le conteneur est calé une fois pour toutes sur la carte la plus haute,
+    // pour que rien ne bouge sous le carrousel quand on change de tool.
+    function fitHeight() {
+      var max = 0;
+      slides.forEach(function (s) {
+        if (s.offsetHeight > max) { max = s.offsetHeight; }
+      });
+      stage.style.height = max + "px";
+    }
+
+    function render() {
+      slides.forEach(function (s, i) {
+        var d = i - index;
+        var ad = Math.abs(d);
+        var hidden = ad > VISIBLE;
+
+        var x = d * 58;                        // décalage horizontal, en %
+        var scale = Math.max(0, 1 - ad * 0.13);
+        var rot = d * -26;                     // rotation Y, en degrés
+        var z = -ad * 130;                     // recul en profondeur
+
+        s.style.transform =
+          "translate(-50%, 0)" +
+          " translateX(" + x + "%)" +
+          " translateZ(" + z + "px)" +
+          " rotateY(" + rot + "deg)" +
+          " scale(" + scale + ")";
+        // Appliqué sans transition (cf. CSS) : animer un flou coûte très cher.
+        s.style.filter = hidden ? "" : "blur(" + (ad * 3) + "px) brightness(" + (1 - ad * 0.26) + ")";
+        s.style.opacity = hidden ? 0 : 1;
+        s.style.zIndex = String(100 - ad);
+        s.classList.toggle("active", d === 0);
+        s.setAttribute("aria-hidden", d === 0 ? "false" : "true");
+      });
+
+      dots.forEach(function (dt, i) {
+        dt.setAttribute("aria-current", i === index ? "true" : "false");
+      });
+      curNum.textContent = String(index + 1);
+      curName.textContent = names[index];
+      prevBtn.disabled = index === 0;
+      nextBtn.disabled = index === slides.length - 1;
+    }
+
+    function go(i) {
+      var next = Math.max(0, Math.min(slides.length - 1, i));
+      if (next === index) return;
+      stopCurrent();          // une preview en cours ne doit pas survivre au changement de carte
+      index = next;
+      render();
+    }
+
+    prevBtn.addEventListener("click", function () { go(index - 1); });
+    nextBtn.addEventListener("click", function () { go(index + 1); });
+
+    // Clavier
+    carousel.addEventListener("keydown", function (e) {
+      if (e.key === "ArrowLeft")  { e.preventDefault(); go(index - 1); }
+      if (e.key === "ArrowRight") { e.preventDefault(); go(index + 1); }
+      if (e.key === "Home")       { e.preventDefault(); go(0); }
+      if (e.key === "End")        { e.preventDefault(); go(slides.length - 1); }
+    });
+
+    // Glissement tactile / souris
+    var dragging = false, startX = 0, moved = 0;
+    stage.addEventListener("pointerdown", function (e) {
+      if (e.target.closest(".play")) return;    // ne pas gêner le bouton de lecture
+      dragging = true; startX = e.clientX; moved = 0;
+    });
+    stage.addEventListener("pointermove", function (e) {
+      if (dragging) { moved = e.clientX - startX; }
+    });
+    var endDrag = function () {
+      if (!dragging) return;
+      dragging = false;
+      if (Math.abs(moved) > 55) { go(index + (moved < 0 ? 1 : -1)); }
+      moved = 0;
+    };
+    stage.addEventListener("pointerup", endDrag);
+    stage.addEventListener("pointercancel", endDrag);
+    stage.addEventListener("pointerleave", endDrag);
+
+    // La hauteur dépend du texte : on la recalcule quand la largeur change
+    // et une fois les polices réellement chargées.
+    var rt;
+    window.addEventListener("resize", function () {
+      clearTimeout(rt);
+      rt = setTimeout(fitHeight, 120);
+    }, { passive: true });
+
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(fitHeight);
+    }
+
+    fitHeight();
+    render();
+  }
+
+  // Copie du bloc de configuration
+  var btn = document.getElementById("copyBtn");
+  btn.addEventListener("click", function () {
+    var text = document.getElementById("cfg").innerText;
+    var done = function () {
+      btn.textContent = "Copié";
+      btn.classList.add("done");
+      setTimeout(function () {
+        btn.textContent = "Copier";
+        btn.classList.remove("done");
+      }, 1800);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, function () { btn.textContent = "Échec"; });
+    } else {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { btn.textContent = "Échec"; }
+      document.body.removeChild(ta);
+    }
+  });
+})();
+</script>
+
+</body>
+</html>
